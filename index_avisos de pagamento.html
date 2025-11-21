@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Conversor PDF → Excel (XLSX) — Importar múltiplos PDFs</title>
+  <style>
+    body{font-family:Inter, Arial, sans-serif;background:#f5f7fa;color:#0f172a;padding:24px}
+    .card{background:white;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06);padding:18px;max-width:980px;margin:0 auto}
+    h1{font-size:20px;margin:0 0 6px}
+    p{margin:6px 0 12px;color:#374151}
+    input[type=file]{display:block;margin-bottom:12px}
+    button{background:#2563eb;color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+    button:disabled{opacity:0.5;cursor:not-allowed}
+    pre{background:#0f172a;color:#f8fafc;padding:12px;border-radius:8px;overflow:auto}
+    .log{font-family:monospace;font-size:13px;white-space:pre-wrap}
+    .options{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+    label{font-size:14px}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Conversor PDF → Excel (XLSX) — Cliente</h1>
+    <p>Arraste vários arquivos PDF ou selecione. O sistema tentará extrair tabelas (heurística) e gerar um arquivo .xlsx com uma aba por PDF (ou mesclar em uma única aba).</p>
+
+    <input id="pdfInput" type="file" accept="application/pdf" multiple />
+
+    <div class="options">
+      <label><input id="mergeSheets" type="checkbox" /> Mesclar todos em uma única planilha</label>
+      <label><input id="usePages" type="checkbox" checked /> Criar aba por página (quando aplicável)</label>
+    </div>
+
+    <button id="convertBtn">Converter e Baixar XLSX</button>
+    <div style="height:12px"></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <!-- Bibliotecas via CDN (funciona com internet). SheetJS (xlsx) e PDF.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script>
+    // Configurações do pdf.js (usa worker do mesmo CDN)
+    if (window['pdfjsLib']) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    }
+
+    const input = document.getElementById('pdfInput');
+    const btn = document.getElementById('convertBtn');
+    const logEl = document.getElementById('log');
+    const mergeSheetsChk = document.getElementById('mergeSheets');
+    const usePagesChk = document.getElementById('usePages');
+
+    function log(...args){
+      logEl.textContent += args.join(' ') + '\n';
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+
+    // Heurística: agrupar textos por coordenada Y (linhas) e ordenar por X para formar colunas.
+    // Isso funciona razoavelmente para PDFs gerados digitalmente (não garante OCR).
+    function pageTextToRows(textItems){
+      // textItems: array com {str, transform: [...], width, height}
+      // transform[5] é Y, transform[4] é X em muitas builds; pdf.js dá transform matrix.
+      const rows = [];
+      // Converter cada item em {x,y,text}
+      const pts = textItems.map(it => {
+        const tx = it.transform;
+        // A matriz é [a, b, c, d, e, f] -> x = e, y = f (PDF coordinate)
+        const x = tx[4];
+        const y = tx[5];
+        return {x,y,text:it.str};
+      });
+      // Agrupar por Y com threshold
+      const yBuckets = [];
+      const yThresh = 2.5; // ajuste se necessário
+      pts.forEach(p => {
+        let bucket = yBuckets.find(b => Math.abs(b.y - p.y) <= yThresh);
+        if (!bucket){
+          bucket = {y:p.y, pts:[]};
+          yBuckets.push(bucket);
+        }
+        bucket.pts.push(p);
+      });
+      // Ordenar buckets por Y (invertendo porque PDF usa base diferente)
+      yBuckets.sort((a,b) => b.y - a.y);
+      // Para cada bucket, ordenar por X e juntar em colunas baseado em gaps
+      yBuckets.forEach(b => {
+        b.pts.sort((u,v) => u.x - v.x);
+        // Simples: cada text item becomes a column value; later we'll try to split into reasonable columns
+        const row = b.pts.map(p => p.text.trim());
+        rows.push(row);
+      });
+      return rows;
+    }
+
+    // Junta arrays de 'linhas' em uma grade com colunas alinhadas
+    function normalizeRows(rows){
+      // rows: array of arrays of cell fragments; we will join fragments with space and try to align to same column count
+      const maxCols = Math.max(...rows.map(r => r.length));
+      const out = rows.map(r => {
+        const nr = Array.from({length:maxCols}, (_,i) => r[i] || '');
+        // juntar fragments que provavelmente pertencem à mesma célula: simples join (cada fragment já foi separado por posição)
+        return nr.map(c => c.replace(/\s+/g,' ').trim());
+      });
+      return out;
+    }
+
+    async function extractTablesFromPDF(file){
+      log('Abrindo', file.name);
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+      const docSheets = [];
+      for (let p = 1; p <= pdf.numPages; p++){
+        log(' Lendo página', p, 'de', pdf.numPages);
+        const page = await pdf.getPage(p);
+        const textContent = await page.getTextContent();
+        const rows = pageTextToRows(textContent.items);
+        const norm = normalizeRows(rows);
+        // Apenas adicione se houver conteúdo
+        if (norm.length > 0) docSheets.push({name:`${file.name} - p${p}`, rows:norm});
+      }
+      pdf.destroy();
+      return docSheets; // array de {name, rows}
+    }
+
+    // Converte estrutura rows -> XLSX sheet
+    function rowsToSheet(rows){
+      // rows é array de arrays
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      return ws;
+    }
+
+    btn.addEventListener('click', async ()=>{
+      const files = Array.from(input.files || []);
+      if (files.length === 0){
+        alert('Selecione pelo menos um PDF.');
+        return;
+      }
+      btn.disabled = true;
+      logEl.textContent = '';
+      log('Iniciando conversão de', files.length, 'arquivos...');
+
+      const workbook = XLSX.utils.book_new();
+      const mergeAll = mergeSheetsChk.checked;
+      const usePages = usePagesChk.checked;
+      const mergedRows = [];
+
+      for (let i=0;i<files.length;i++){
+        try{
+          const sheets = await extractTablesFromPDF(files[i]);
+          if (sheets.length === 0){
+            log('  Nenhum texto/tabela detectado em', files[i].name);
+            // ainda cria uma aba vazia com nota
+            const ws = XLSX.utils.aoa_to_sheet([[`Nenhum texto/tabela detectado em ${files[i].name}`]]);
+            XLSX.utils.book_append_sheet(workbook, ws, sanitizeSheetName(files[i].name).slice(0,31));
+            continue;
+          }
+
+          if (mergeAll){
+            sheets.forEach(s => {
+              // prefixar com nome do arquivo e, se usePages, página
+              s.rows.forEach(r => mergedRows.push([files[i].name,'', ...r]));
+            });
+          } else {
+            if (usePages){
+              // criar uma aba por página (ou por conjunto de linhas detectado)
+              for (let j=0;j<sheets.length;j++){
+                const sheet = sheets[j];
+                const ws = rowsToSheet(sheet.rows);
+                const name = sanitizeSheetName(sheet.name).slice(0,31);
+                XLSX.utils.book_append_sheet(workbook, ws, name);
+                log('  Adicionada aba', name);
+              }
+            } else {
+              // juntar todas as páginas do arquivo em uma aba
+              const allRows = sheets.flatMap(s => s.rows);
+              const ws = rowsToSheet(allRows);
+              const name = sanitizeSheetName(files[i].name).slice(0,31);
+              XLSX.utils.book_append_sheet(workbook, ws, name);
+              log('  Adicionada aba única para', files[i].name);
+            }
+          }
+        } catch(err){
+          console.error(err);
+          log('  Erro ao processar', files[i].name, ':', err.message || err);
+        }
+      }
+
+      if (mergeAll){
+        if (mergedRows.length === 0){
+          log('Nenhum dado para mesclar.');
+        } else {
+          // adicionar cabeçalho simples
+          const header = ['Arquivo','_sep_','Colunas detectadas...'];
+          const ws = XLSX.utils.aoa_to_sheet([header,...mergedRows]);
+          XLSX.utils.book_append_sheet(workbook, ws, 'Mesclado');
+          log('Planilha mesclada criada.');
+        }
+      }
+
+      // gerar o arquivo
+      try{
+        const wbout = XLSX.write(workbook, {bookType:'xlsx', type:'array'});
+        const blob = new Blob([wbout], {type:'application/octet-stream'});
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `conversao-pdfs-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.xlsx`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        log('Download iniciado:', link.download);
+      } catch(e){
+        console.error(e);
+        log('Erro ao montar o arquivo XLSX:', e.message || e);
+      }
+
+      btn.disabled = false;
+    });
+
+    function sanitizeSheetName(name){
+      return name.replace(/[^0-9a-zA-Z \-_.()]/g,'_');
+    }
+
+    // Dica: arrastar arquivos para o input
+    input.addEventListener('change', ()=>{
+      log('Arquivos selecionados:', input.files.length);
+    });
+
+  </script>
+</body>
+</html>
