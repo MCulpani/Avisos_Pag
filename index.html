@@ -104,7 +104,7 @@
       return out;
     }
 
-    async function extractTablesFromPDF(file){
+    async function extractTablesFromPDF(file){(file){
       log('Abrindo', file.name);
       const arrayBuffer = await file.arrayBuffer();
       const pdf = await pdfjsLib.getDocument({data:arrayBuffer}).promise;
@@ -113,7 +113,17 @@
         log(' Lendo página', p, 'de', pdf.numPages);
         const page = await pdf.getPage(p);
         const textContent = await page.getTextContent();
-        const rows = pageTextToRows(textContent.items);
+        const rowsAll = pageTextToRows(textContent.items);
+        // FILTRO: localizar a linha que contém "N° doc.SAP"
+        const headerIndex = rowsAll.findIndex(r => r.some(c => /N° doc\.SAP/i.test(c)));
+        if (headerIndex === -1) {
+          log('  Cabeçalho "N° doc.SAP" não encontrado na página', p);
+          continue;
+        }
+        // recorta do cabeçalho até o final
+        const rows = rowsAll.slice(headerIndex);
+        // garantir que a primeira linha seja mantida como cabeçalho
+        const norm = normalizeRows(rows);
         const norm = normalizeRows(rows);
         // Apenas adicione se houver conteúdo
         if (norm.length > 0) docSheets.push({name:`${file.name} - p${p}`, rows:norm});
