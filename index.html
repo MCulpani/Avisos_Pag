@@ -121,7 +121,13 @@
           continue;
         }
         // recorta do cabeçalho até o final
-        const rows = rowsAll.slice(headerIndex);
+        const rows = // cortar início e fim
+        let cut = rowsAll.slice(headerIndex);
+        // remover linhas após marcadores indesejados
+        const stopMarkers = [/Transporte/i, /Mensagem automática/i, /Página /i, /Total:/i];
+        const stopIndex = cut.findIndex(r => stopMarkers.some(m => r.join(' ').match(m)));
+        if (stopIndex !== -1) cut = cut.slice(0, stopIndex);
+        const rows = cut;(headerIndex);
         // garantir que a primeira linha seja mantida como cabeçalho
         const norm = normalizeRows(rows);
         const norm = normalizeRows(rows);
@@ -156,7 +162,7 @@
 
       for (let i=0;i<files.length;i++){
         try{
-          const sheets = await extractTablesFromPDF(files[i]);
+          const sheets = await extractTablesFromPDF(files[i]); // agora sempre compila em única tabela(files[i]);
           if (sheets.length === 0){
             log('  Nenhum texto/tabela detectado em', files[i].name);
             // ainda cria uma aba vazia com nota
@@ -165,8 +171,12 @@
             continue;
           }
 
-          if (mergeAll){
+          // forçamos compilação única em uma tabela final
+      const mergeAll = true; // ignorar checkbox{
+            // extrair apenas linhas válidas e montar tabela única
             sheets.forEach(s => {
+              s.rows.forEach(r => mergedRows.push(r));
+            });(s => {
               // prefixar com nome do arquivo e, se usePages, página
               s.rows.forEach(r => mergedRows.push([files[i].name,'', ...r]));
             });
@@ -200,7 +210,8 @@
           log('Nenhum dado para mesclar.');
         } else {
           // adicionar cabeçalho simples
-          const header = ['Arquivo','_sep_','Colunas detectadas...'];
+          // cabeçalho fixo
+          const header = ['Nº doc.SAP','Nº NF','Data','Desconto','Montante bruto'];,'_sep_','Colunas detectadas...'];
           const ws = XLSX.utils.aoa_to_sheet([header,...mergedRows]);
           XLSX.utils.book_append_sheet(workbook, ws, 'Mesclado');
           log('Planilha mesclada criada.');
