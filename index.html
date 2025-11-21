@@ -36,7 +36,9 @@
   </div>
 
   <!-- Bibliotecas via CDN (funciona com internet). SheetJS (xlsx) e PDF.js -->
-  <script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script>
 // === JS REPARADO ===
 // Mantido simples e funcional
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -45,7 +47,8 @@ const input = document.getElementById('pdfInput');
 const btn = document.getElementById('convertBtn');
 const logEl = document.getElementById('log');
 
-function log(msg){ logEl.textContent += msg + "\n"; }
+function log(msg){ logEl.textContent += msg + "
+"; }
 
 function pageTextToRows(items){
   const pts = items.map(it => ({ x: it.transform[4], y: it.transform[5], text: it.str.trim() }));
