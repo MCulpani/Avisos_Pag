@@ -36,7 +36,90 @@
   </div>
 
   <!-- Bibliotecas via CDN (funciona com internet). SheetJS (xlsx) e PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script>
+// === JS REPARADO ===
+// Mantido simples e funcional
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+const input = document.getElementById('pdfInput');
+const btn = document.getElementById('convertBtn');
+const logEl = document.getElementById('log');
+
+function log(msg){ logEl.textContent += msg + "\n"; }
+
+function pageTextToRows(items){
+  const pts = items.map(it => ({ x: it.transform[4], y: it.transform[5], text: it.str.trim() }));
+  const buckets = [];
+  pts.forEach(p => {
+    let b = buckets.find(x => Math.abs(x.y - p.y) < 3);
+    if(!b){ b = {y:p.y, pts:[]}; buckets.push(b);} 
+    b.pts.push(p);
+  });
+  buckets.sort((a,b)=>b.y-a.y);
+  return buckets.map(b => b.pts.sort((u,v)=>u.x-v.x).map(x=>x.text));
+}
+
+function normalize(r){
+  const max = Math.max(...r.map(x=>x.length));
+  return r.map(x => Array.from({length:max}, (_,i)=>x[i]||''));
+}
+
+async function extractTablesFromPDF(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+  let result = [];
+
+  for(let p=1; p<=pdf.numPages; p++){
+    const page = await pdf.getPage(p);
+    const txt = await page.getTextContent();
+    const rowsAll = pageTextToRows(txt.items);
+
+    const headerIndex = rowsAll.findIndex(r => r.some(c => /N° doc\.SAP/i.test(c)));
+    if(headerIndex === -1) continue;
+
+    let cut = rowsAll.slice(headerIndex);
+    const stops = [/Transporte/i, /Mensagem automática/i, /Página /i, /Total:/i];
+    const stopIndex = cut.findIndex(r => stops.some(m => m.test(r.join(' '))));
+    if(stopIndex !== -1) cut = cut.slice(0, stopIndex);
+
+    const norm = normalize(cut);
+    result.push(...norm);
+  }
+  return result;
+}
+
+btn.onclick = async () => {
+  const files = Array.from(input.files||[]);
+  if(!files.length){ alert("Selecione PDFs"); return; }
+
+  btn.disabled = true;
+  logEl.textContent = '';
+
+  let allRows = [];
+
+  for(const f of files){
+    const rows = await extractTablesFromPDF(f);
+    allRows.push(...rows);
+  }
+
+  allRows = allRows.filter(r => r.join('').trim() !== '');
+
+  const header = ['Nº doc.SAP','Nº NF','Data','Desconto','Montante bruto'];
+  const final = [header, ...allRows.slice(1)];
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(final);
+  XLSX.utils.book_append_sheet(wb, ws, 'Compilado');
+
+  const blob = new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})], {type:'application/octet-stream'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'compilado.xlsx';
+  a.click();
+
+  btn.disabled = false;
+};
+</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
     // Configurações do pdf.js (usa worker do mesmo CDN)
