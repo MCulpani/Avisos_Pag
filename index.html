@@ -3,189 +3,264 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Conversor PDF → Excel (XLSX) — Compilado Único</title>
+  <title>PDF → Excel (única aba) — Compilador</title>
   <style>
-    body{font-family:Inter, Arial, sans-serif;background:#f5f7fa;color:#0f172a;padding:24px}
-    .card{background:white;border-radius:12px;box-shadow:0 6px 18px rgba(15,23,42,0.06);padding:18px;max-width:980px;margin:0 auto}
-    h1{font-size:20px;margin:0 0 6px}
-    p{margin:6px 0 12px;color:#374151'}
-    input[type=file]{display:block;margin-bottom:12px}
-    button{background:#2563eb;color:white;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
-    button:disabled{opacity:0.5;cursor:not-allowed}
-    .log{font-family:monospace;font-size:13px;white-space:pre-wrap;background:#fff;border-radius:6px;padding:10px;max-height:240px;overflow:auto;margin-top:12px}
+    body { font-family: Inter, Arial, sans-serif; background:#f7fafc; color:#0f172a; padding:24px; }
+    .card { background:white; border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,0.06); padding:18px; max-width:980px; margin:0 auto }
+    h1 { margin:0 0 8px 0; font-size:20px }
+    p { margin:6px 0 12px 0; color:#475569 }
+    input[type=file] { display:block; margin-bottom:12px }
+    button { padding:10px 14px; border-radius:8px; border:0; background:#0ea5a4; color:white; cursor:pointer }
+    button[disabled] { opacity:0.6; cursor:not-allowed }
+    table { width:100%; border-collapse:collapse; margin-top:12px }
+    th,td { text-align:left; padding:6px 8px; border-bottom:1px solid #eef2f7; font-size:13px }
+    pre { background:#0b1220; color:#d1fae5; padding:12px; border-radius:8px; overflow:auto }
+    .progress { margin-top:8px }
   </style>
 </head>
 <body>
   <div class="card">
-    <h1>Conversor PDF → Excel (XLSX) — Compilado Único</h1>
-    <p>Selecione vários PDFs. O sistema extrai, a partir da linha <strong>N° doc.SAP</strong>, até o próximo marcador (Transporte / Mensagem automática / Página / Total) e gera um único XLSX com o cabeçalho fixo.</p>
+    <h1>Compilar vários PDFs em um único Excel (uma aba)</h1>
+    <p>Selecione vários arquivos PDF. O script tentará extrair linhas que começam com <code>5</code> (como no seu Power Query) e montar as colunas: <strong>Column1.1, Column1.2, Column2, Column3, Column4</strong>. Ao final será gerado um .xlsx com 1 aba.</p>
 
-    <input id="pdfInput" type="file" accept="application/pdf" multiple />
-    <button id="convertBtn">Converter e Baixar XLSX</button>
+    <input id="files" type="file" accept="application/pdf" multiple />
+    <div>
+      <button id="processBtn">Processar e gerar Excel</button>
+      <button id="downloadBtn" disabled>Baixar Excel</button>
+    </div>
+    <div class="progress" id="progress"></div>
 
-    <div class="log" id="log">Logs aparecerão aqui...</div>
+    <div id="preview"></div>
+
+    <h3>Logs</h3>
+    <pre id="log">Pronto.</pre>
   </div>
 
-  <!-- Dependências via CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- Dependências: pdf.js (Mozilla) e SheetJS (xlsx) via CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <script>
-  (function(){
+    // Configura worker do pdf.js (aponta para CDN)
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    }
+
+    const filesInput = document.getElementById('files');
+    const processBtn = document.getElementById('processBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
     const logEl = document.getElementById('log');
-    function log(){
-      try{
-        logEl.textContent = (logEl.textContent.trim() ? logEl.textContent + '\\n' : '') + Array.from(arguments).join(' ');
-        logEl.scrollTop = logEl.scrollHeight;
-      }catch(e){}
+    const progressEl = document.getElementById('progress');
+    const previewEl = document.getElementById('preview');
+
+    let compiledRows = [];
+    let workbookBinary = null;
+
+    function log(msg) {
+      const now = new Date().toLocaleTimeString();
+      logEl.textContent = `[${now}] ${msg}\n` + logEl.textContent;
     }
 
-    // checagens
-    if(typeof XLSX === 'undefined') {
-      log('ERRO: Biblioteca XLSX não carregada. Verifique conexão com CDN.');
-      return;
-    }
-    if(typeof pdfjsLib === 'undefined') {
-      log('ERRO: Biblioteca pdf.js não carregada. Verifique conexão com CDN.');
-      return;
-    }
-
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
-    const input = document.getElementById('pdfInput');
-    const btn = document.getElementById('convertBtn');
-
-    // Converte textItems do pdf.js em "linhas" aproximadas usando posição Y e X
-    function pageTextToRows(items){
-      if(!Array.isArray(items)) return [];
-      const pts = items.map(it => {
-        const tx = Array.isArray(it.transform) ? it.transform : [1,0,0,1,0,0];
-        return { x: tx[4] || 0, y: tx[5] || 0, text: (it.str||'').trim() };
-      });
-      const buckets = [];
-      const Y_THRESHOLD = 3; // ajuste se necessário
-      pts.forEach(p => {
-        let b = buckets.find(bb => Math.abs(bb.y - p.y) <= Y_THRESHOLD);
-        if(!b){
-          b = { y: p.y, pts: [] };
-          buckets.push(b);
-        }
-        b.pts.push(p);
-      });
-      // ordenar de cima para baixo (PDF tem coordenadas específicas)
-      buckets.sort((a,b) => b.y - a.y);
-      // para cada bucket, ordenar por x e retornar array de textos
-      return buckets.map(b => b.pts.sort((u,v)=>u.x-v.x).map(pt => pt.text));
+    function parseCurrency(text) {
+      if (!text) return null;
+      // Remove currency symbols and whitespace
+      let t = text.replace(/[R$\s]/g, '');
+      // If contains both '.' and ',', assume '.' thousands and ',' decimals (pt-BR)
+      if (t.indexOf('.') !== -1 && t.indexOf(',') !== -1) {
+        t = t.replace(/\./g, '').replace(',', '.');
+      } else {
+        // if only comma present, treat comma as decimal
+        if (t.indexOf(',') !== -1 && t.indexOf('.') === -1) t = t.replace(',', '.');
+        // if only dots present and more than one, remove thousands separators
+        if ((t.match(/\./g) || []).length > 1) t = t.replace(/\./g, '');
+      }
+      // remove any non-digit except dot and minus
+      t = t.replace(/[^0-9.\-]/g, '');
+      const v = parseFloat(t);
+      return isNaN(v) ? null : v;
     }
 
-    // Normaliza linhas para ter mesmo número de colunas (preenchendo vazios)
-    function normalizeRows(rows){
-      if(!rows || rows.length === 0) return [];
-      const maxCols = Math.max(...rows.map(r => r.length));
-      return rows.map(r => {
-        const out = Array.from({length:maxCols}, (_,i) => (r[i]||'').replace(/\s+/g,' ').trim());
-        return out;
-      });
+    function parseDateToken(token) {
+      // token examples: dd/mm/yyyy or yyyy-mm-dd or dd-mm-yyyy
+      token = token.replace(/\./g,'-');
+      const dmY = /^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/;
+      const Ymd = /^(\d{4})[\-](\d{2})[\-](\d{2})$/;
+      if (dmY.test(token)) {
+        const m = token.match(dmY);
+        return `${m[3]}-${m[2]}-${m[1]}`; // ISO yyyy-mm-dd
+      }
+      if (Ymd.test(token)) return token;
+      return null;
     }
 
-    // Extrai blocos por página: localiza header "N° doc.SAP" e corta até marcadores finais
-    async function extractRowsFromPDF(file){
-      log('Abrindo', file.name);
-      const arrayBuffer = await file.arrayBuffer();
-      const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-      const collected = [];
+    async function extractTextFromPDF(arrayBuffer) {
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map(item => item.str);
+        // join with spaces and add newline between pages so we can split lines
+        fullText += strings.join(' ') + '\n';
+      }
+      return fullText;
+    }
 
-      for(let p=1; p<=pdf.numPages; p++){
-        try{
-          log(' Lendo página', p, 'de', pdf.numPages);
-          const page = await pdf.getPage(p);
-          const textContent = await page.getTextContent();
-          const rowsAll = pageTextToRows(textContent.items || []);
+    function tryParseDataLines(text) {
+      const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+      const parsed = [];
 
-          // Encontrar o índice do cabeçalho "N° doc.SAP" (case-insensitive)
-          const headerIndex = rowsAll.findIndex(r => r.some(c => /N° doc\.SAP/i.test(c)));
-          if(headerIndex === -1){
-            log('  Cabeçalho "N° doc.SAP" não encontrado na página', p);
+      for (const line of lines) {
+        // Quick filter: line must start with '5' (as in your M code)
+        if (!line.startsWith('5')) continue;
+
+        // Tokenize by whitespace
+        const tokens = line.split(/\s+/);
+        if (tokens.length < 4) continue; // too short
+
+        // We'll assume the last two tokens are Column3 and Column4 (currencies),
+        // the token before those is Column2 (date), and everything before is Column1 (composite)
+        let col4 = tokens.pop();
+        let col3 = tokens.pop();
+        let maybeDate = tokens.pop();
+
+        // If maybeDate doesn't look like a date, attempt to find a date token from the remaining tokens (search from end)
+        if (!parseDateToken(maybeDate)) {
+          let foundIndex = -1;
+          for (let i = tokens.length - 1; i >= 0; i--) {
+            if (parseDateToken(tokens[i])) { foundIndex = i; break; }
+          }
+          if (foundIndex >= 0) {
+            maybeDate = tokens.splice(foundIndex, 1)[0];
+          } else {
+            // no date found — put token back and skip
             continue;
           }
+        }
 
-          // cortar do header até marcador final
-          let cut = rowsAll.slice(headerIndex);
-          const stopMarkers = [/Transporte/i, /Mensagem automática/i, /Página\\s*\\d+/i, /Total:/i];
-          const stopIndex = cut.findIndex(r => stopMarkers.some(m => m.test((r||[]).join(' '))));
-          if(stopIndex !== -1) cut = cut.slice(0, stopIndex);
+        const column2 = parseDateToken(maybeDate);
+        const column3 = parseCurrency(col3);
+        const column4 = parseCurrency(col4);
+        const column1 = tokens.join(' ');
 
-          const norm = normalizeRows(cut);
-          if(norm.length) collected.push(...norm);
-        }catch(e){
-          log('  Erro na página', p, ':', e && (e.message || e));
+        // Split column1 into Column1.1 (number) and Column1.2 (rest) by first space
+        const idxSpace = column1.indexOf(' ');
+        let column1_1 = column1;
+        let column1_2 = '';
+        if (idxSpace > 0) {
+          column1_1 = column1.substring(0, idxSpace);
+          column1_2 = column1.substring(idxSpace + 1).trim();
+        }
+
+        // try to parse integer for Column1.1
+        const column1_1_int = parseInt(column1_1.replace(/[^0-9\-]/g, ''));
+
+        parsed.push({
+          'Column1.1': isNaN(column1_1_int) ? column1_1 : column1_1_int,
+          'Column1.2': column1_2,
+          'Column2': column2,
+          'Column3': column3,
+          'Column4': column4,
+          '__source_line': line
+        });
+      }
+
+      return parsed;
+    }
+
+    async function processFiles(files) {
+      compiledRows = [];
+      progressEl.textContent = `Arquivos: ${files.length}`;
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        progressEl.textContent = `Processando ${i+1}/${files.length}: ${f.name}`;
+        log(`Lendo ${f.name} (${f.size} bytes)`);
+        try {
+          const arrayBuffer = await f.arrayBuffer();
+          const text = await extractTextFromPDF(arrayBuffer);
+          const parsed = tryParseDataLines(text);
+          log(`Encontradas ${parsed.length} linhas a partir de ${f.name}`);
+          compiledRows.push(...parsed.map(r => ({...r, 'Nome da Origem': f.name})));
+        } catch (err) {
+          log(`Erro lendo ${f.name}: ${err.message || err}`);
         }
       }
 
-      try{ pdf.destroy(); }catch(e){}
-      return collected;
+      progressEl.textContent = `Concluído — linhas: ${compiledRows.length}`;
+      return compiledRows;
     }
 
-    // Ação do botão: processa todos os arquivos e gera um único XLSX
-    btn.addEventListener('click', async () => {
-      try{
-        const files = Array.from(input.files || []);
-        if(files.length === 0){
-          alert('Selecione pelo menos um PDF.');
-          return;
+    function renderPreview(rows, max=50) {
+      if (!rows || rows.length === 0) { previewEl.innerHTML = '<p>Nenhuma linha encontrada.</p>'; return; }
+      const sample = rows.slice(0, max);
+      let html = '<table><thead><tr>';
+      const keys = Object.keys(sample[0]);
+      // exclude internal source_line from header (but keep Nome da Origem)
+      const headerKeys = keys.filter(k => k !== '__source_line');
+      for (const k of headerKeys) html += `<th>${k}</th>`;
+      html += '</tr></thead><tbody>';
+      for (const r of sample) {
+        html += '<tr>';
+        for (const k of headerKeys) html += `<td>${r[k] !== null && r[k] !== undefined ? r[k] : ''}</td>`;
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      if (rows.length > max) html += `<p>Mostrando ${max} de ${rows.length} linhas.</p>`;
+      previewEl.innerHTML = html;
+    }
+
+    function buildExcel(rows) {
+      if (!rows || rows.length === 0) return null;
+      // Remove internal helper fields before exporting
+      const cleanRows = rows.map(r => ({
+        'Nome da Origem': r['Nome da Origem'],
+        'Column1.1': r['Column1.1'],
+        'Column1.2': r['Column1.2'],
+        'Column2': r['Column2'],
+        'Column3': r['Column3'],
+        'Column4': r['Column4']
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(cleanRows, {dateNF: 'yyyy-mm-dd'});
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Dados');
+      return wb;
+    }
+
+    processBtn.addEventListener('click', async () => {
+      const files = Array.from(filesInput.files || []);
+      if (files.length === 0) { alert('Selecione pelo menos um arquivo PDF.'); return; }
+      processBtn.disabled = true;
+      downloadBtn.disabled = true;
+      compiledRows = [];
+      log('Iniciando processamento...');
+      try {
+        await processFiles(files);
+        renderPreview(compiledRows);
+        if (compiledRows.length === 0) {
+          log('Nenhuma linha foi extraída. Verifique o formato dos PDFs ou as regras de detecção.');
+          alert('Nenhuma linha extraída. Veja o log.');
+        } else {
+          const wb = buildExcel(compiledRows);
+          // store workbook and enable download
+          workbookBinary = wb;
+          downloadBtn.disabled = false;
+          log('Excel pronto para download.');
         }
-        btn.disabled = true;
-        logEl.textContent = '';
-        log('Iniciando conversão de', files.length, 'arquivo(s)...');
-
-        let merged = [];
-        for(const f of files){
-          const rows = await extractRowsFromPDF(f);
-          if(rows && rows.length) merged.push(...rows);
-        }
-
-        // filtrar linhas vazias e remover linhas de cabeçalho repetidas (que contenham N° doc.SAP)
-        merged = merged.filter(r => r.join('').trim() !== '');
-        merged = merged.filter((r, idx) => !(idx > 0 && /N° doc\.SAP/i.test(r.join(' '))));
-
-        // garantir pelo menos 5 colunas por linha (preenche vazios)
-        const finalRows = merged.map(r => {
-          const out = r.slice(0,5);
-          while(out.length < 5) out.push('');
-          return out;
-        });
-
-        // cabeçalho fixo conforme solicitado
-        const header = ['Nº doc.SAP', 'Nº NF', 'Data', 'Desconto', 'Montante bruto'];
-        const final = [header, ...finalRows];
-
-        // gerar workbook e forçar download
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(final);
-        XLSX.utils.book_append_sheet(wb, ws, 'Mesclado');
-
-        const wbout = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-        const blob = new Blob([wbout], {type:'application/octet-stream'});
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `compilado-pdfs-${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.xlsx`;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-
-        log('Download iniciado:', link.download);
-      }catch(e){
-        console.error(e);
-        log('Erro durante a conversão:', e && (e.message || e));
-      }finally{
-        btn.disabled = false;
+      } catch (err) {
+        log('Erro: ' + (err.message || err));
+      } finally {
+        processBtn.disabled = false;
       }
     });
 
-    // feedback ao selecionar arquivos
-    input.addEventListener('change', ()=>{ log('Arquivos selecionados:', input.files.length); });
+    downloadBtn.addEventListener('click', () => {
+      if (!workbookBinary) return;
+      const filename = `compilado_${new Date().toISOString().slice(0,10)}.xlsx`;
+      XLSX.writeFile(workbookBinary, filename);
+      log('Arquivo gerado: ' + filename);
+    });
 
-  })();
   </script>
 </body>
 </html>
