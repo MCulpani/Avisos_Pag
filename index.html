@@ -124,7 +124,24 @@ async function processFiles(files){
     const rows = extractRows(txt, location);
     log(`Linhas encontradas: ${rows.length}`);
 
-    rows.forEach(r => r["Nome da Origem"] = f.name);
+    // Detectar LOCAL no PDF
+    let local = "";
+    const locais = [
+      "JOINVILLE - SC",
+      "CASTRO - PR",
+      "CONTAGEM - MG",
+      "ESCADA - PE",
+      "RIO CLARO - SP",
+      "SIMOES FILHO - BA"
+    ];
+
+    for (const L of locais) {
+      if (txt.includes(L)) { local = L; break; }
+    }
+
+    rows.forEach(r => {
+      r["Local"] = local;(r => r["Nome da Origem";
+    })"] = f.name);
     compiled.push(...rows);
   }
 
