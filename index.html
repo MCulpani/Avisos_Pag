@@ -71,9 +71,7 @@ async function extractText(file){
   return text;
 }
 
-// ---------------------------
-// Regex NOVO (inclui NF terminando em -U)
-// ---------------------------
+// Regex incluindo final -U
 const rowRegex =
   /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d\.,]+)\s+([\d\.,]+)/g;
 
@@ -86,7 +84,12 @@ function parseCurrency(v){
 function parseDateBR(d){
   const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/);
   if(!m) return null;
-  return `${m[3]}-${m[2]}-${m[1]}`;
+  return `${m[1]}/${m[2]}/${m[3]}`; // <-- agora com /
+}
+
+function formatBRL(value){
+  if(value == null || isNaN(value)) return "";
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
 function extractRows(text){
@@ -95,8 +98,8 @@ function extractRows(text){
   while((m = rowRegex.exec(text)) !== null){
     out.push({
       "Nº doc SAP": m[1],
-      "NF": m[2],                     // preservado literal
-      "Data": parseDateBR(m[3]),
+      "NF": m[2],
+      "Data": parseDateBR(m[3]), // <-- agora com barra
       "Desconto": parseCurrency(m[4]),
       "Montante bruto": parseCurrency(m[5])
     });
@@ -136,7 +139,13 @@ function renderPreview(rows){
 
   rows.slice(0,50).forEach(r=>{
     html += "<tr>";
-    cols.forEach(c => html += `<td>${r[c] ?? ""}</td>`);
+    cols.forEach(c => {
+      let val = r[c];
+      if(c === "Montante bruto" || c === "Desconto"){
+        val = formatBRL(val);
+      }
+      html += `<td>${val ?? ""}</td>`;
+    });
     html += "</tr>";
   });
 
@@ -149,7 +158,13 @@ function renderPreview(rows){
 }
 
 function buildExcel(rows){
-  const ws = XLSX.utils.json_to_sheet(rows);
+  const exportRows = rows.map(r => ({
+    ...r,
+    "Desconto": r["Desconto"],
+    "Montante bruto": r["Montante bruto"]
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(exportRows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Dados");
   return wb;
