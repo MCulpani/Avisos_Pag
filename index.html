@@ -120,11 +120,8 @@ async function processFiles(files){
   for(const f of files){
     log(`Lendo ${f.name} ...`);
     const txt = await extractText(f);
-    const location = detectLocation(txt);
-    const rows = extractRows(txt, location);
-    log(`Linhas encontradas: ${rows.length}`);
 
-    // Detectar LOCAL no PDF
+    // Detectar LOCAL
     let local = "";
     const locais = [
       "JOINVILLE - SC",
@@ -134,18 +131,27 @@ async function processFiles(files){
       "RIO CLARO - SP",
       "SIMOES FILHO - BA"
     ];
-
-    for (const L of locais) {
-      if (txt.includes(L)) { local = L; break; }
+    for(const L of locais){
+      if(txt.includes(L)){ local = L; break; }
     }
 
+    // Extrair linhas
+    const rows = extractRows(txt, local);
+    log(`Linhas encontradas: ${rows.length}`);
+
+    // Completar metadados corretamente
     rows.forEach(r => {
-      r["Local"] = local;(r => r["Nome da Origem";
-    })"] = f.name);
+      r["Local"] = local;
+      r["Nome da Origem"] = f.name;
+    });
+
     compiled.push(...rows);
   }
 
   if(!compiled.length){
+    log("Nenhuma linha foi encontrada.");
+  }
+}){
     log("Nenhuma linha foi encontrada.");
   }
 }
