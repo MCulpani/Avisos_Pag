@@ -1,177 +1,191 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<title>Compilador de Avisos de Pagamento - PDF → Excel</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Compilar Avisos de Pagamento → Excel</title>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0; padding:24px; }
+    .card { background:#fff; max-width:900px; margin:auto; padding:24px; border-radius:12px;
+            box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+    h1 { margin-top:0; font-size:20px; }
+    button { padding:10px 16px; border:0; border-radius:8px; background:#0ea5a4; color:white; cursor:pointer; }
+    button[disabled] { opacity:0.6; cursor:not-allowed; }
+    #log { background:#0f172a; color:#d1fae5; padding:12px; border-radius:6px; height:200px; overflow:auto; }
+    table { width:100%; border-collapse:collapse; margin-top:18px; }
+    th,td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
+  </style>
 
-<style>
-    body { font-family: Arial; margin: 20px; }
-    #log { white-space: pre-wrap; background:#f0f0f0; padding:10px; height:200px; overflow-y:auto; }
-    table { border-collapse: collapse; margin-top: 15px; }
-    table, th, td { border: 1px solid #ccc; padding: 6px; }
-</style>
+  <!-- pdf.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+
+  <!-- SheetJS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </head>
-
 <body>
 
-<h2>Compilar Avisos de Pagamento (PDF → Excel)</h2>
+<div class="card">
+  <h1>Compilar PDFs de Aviso de Pagamento → Excel</h1>
 
-<input type="file" id="files" multiple accept="application/pdf"><br><br>
+  <input id="files" type="file" accept="application/pdf" multiple />
 
-<button id="processBtn">Processar e gerar Excel</button>
-<button id="downloadBtn" disabled>Baixar Excel</button>
+  <br><br>
+  <button id="processBtn">Processar e gerar Excel</button>
+  <button id="downloadBtn" disabled>Baixar Excel</button>
 
-<h3>Status</h3>
-<div id="progress"></div>
+  <h3>Logs</h3>
+  <pre id="log">Pronto.</pre>
 
-<h3>Log</h3>
-<div id="log"></div>
-
-<h3>Prévia</h3>
-<div id="preview"></div>
+  <div id="preview"></div>
+</div>
 
 <script>
-// =============== CONFIG PDF WORKER ===============
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
-let compiledRows = [];
+const filesInput = document.getElementById("files");
+const processBtn = document.getElementById("processBtn");
+const downloadBtn = document.getElementById("downloadBtn");
+const logEl = document.getElementById("log");
+const previewEl = document.getElementById("preview");
+
+let compiled = [];
 let workbookBinary = null;
 
-// ====== LOG ======
-function log(msg) {
-    const now = new Date().toLocaleTimeString();
-    document.getElementById("log").textContent =
-        `[${now}] ${msg}\n` + document.getElementById("log").textContent;
+function log(msg){
+  logEl.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + logEl.textContent;
 }
 
-// ====== EXTRAÇÃO DE TEXTO ======
-async function extractTextFromPDF(buf) {
-    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
-    let text = "";
+async function extractText(file){
+  const buf = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({data:buf}).promise;
 
-    for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map(x => x.str).join(" ") + "\n";
-    }
-    return text;
+  let text = "";
+  for(let i=1;i<=pdf.numPages;i++){
+    const page = await pdf.getPage(i);
+    const content = await page.getTextContent();
+    text += content.items.map(x=>x.str).join(" ") + "\n";
+  }
+  return text;
 }
 
-// ====== PARSER AJUSTADO AOS PDFs (NF preservada) ======
-function parseRows(text, origem) {
-    const rows = [];
+// ---------------------------
+// Regex NOVO (inclui NF terminando em -U)
+// ---------------------------
+const rowRegex =
+  /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d\.,]+)\s+([\d\.,]+)/g;
 
-    const regex = /(\d{10,})\s+([0-9\-]+)\s+(\d{2}\.\d{2}\.\d{4})\s+([\d\.,]+)\s+([\d\.,]+)/g;
-
-    let match;
-    while ((match = regex.exec(text)) !== null) {
-        rows.push({
-            SAP: match[1],
-            NF: String(match[2]).trim(),  // <<<<<< CORREÇÃO AQUI
-            Data: match[3],
-            Desconto: match[4].replace(/\./g, "").replace(",", "."),
-            Montante: match[5].replace(/\./g, "").replace(",", "."),
-            OrigemPDF: origem
-        });
-    }
-
-    return rows;
+function parseCurrency(v){
+  if(!v) return null;
+  let t = v.replace(/\./g,"").replace(",",".");
+  return parseFloat(t);
 }
 
-// ===== PREVIEW =====
-function renderPreview(rows) {
-    const preview = document.getElementById("preview");
+function parseDateBR(d){
+  const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  if(!m) return null;
+  return `${m[3]}-${m[2]}-${m[1]}`;
+}
 
-    if (!rows.length) {
-        preview.innerHTML = "<p>Nenhuma linha encontrada.</p>";
-        return;
-    }
-
-    let html = "<table><tr>";
-    Object.keys(rows[0]).forEach(k => html += `<th>${k}</th>`);
-    html += "</tr>";
-
-    rows.slice(0, 50).forEach(r => {
-        html += "<tr>";
-        Object.keys(r).forEach(k => html += `<td>${r[k]}</td>`);
-        html += "</tr>";
+function extractRows(text){
+  let out = [];
+  let m;
+  while((m = rowRegex.exec(text)) !== null){
+    out.push({
+      "Nº doc SAP": m[1],
+      "NF": m[2],                     // preservado literal
+      "Data": parseDateBR(m[3]),
+      "Desconto": parseCurrency(m[4]),
+      "Montante bruto": parseCurrency(m[5])
     });
-
-    html += "</table>";
-    preview.innerHTML = html;
+  }
+  return out;
 }
 
-// ===== GERAR EXCEL =====
-function buildExcel(rows) {
-    const ws = XLSX.utils.json_to_sheet(rows);
+async function processFiles(files){
+  compiled = [];
 
-    // Forçar NF como texto no Excel
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for (let R = 1; R <= range.e.r; R++) {
-        const cell = ws[`B${R+1}`];
-        if (cell) cell.t = "s"; // força string
-    }
+  for(const f of files){
+    log(`Lendo ${f.name} ...`);
+    const txt = await extractText(f);
+    const rows = extractRows(txt);
+    log(`Linhas encontradas: ${rows.length}`);
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Dados");
-    return wb;
+    rows.forEach(r => r["Nome da Origem"] = f.name);
+    compiled.push(...rows);
+  }
+
+  if(!compiled.length){
+    log("Nenhuma linha foi encontrada.");
+  }
 }
 
-// ===== PROCESSAR PDFS =====
-async function processFiles(files) {
-    compiledRows = [];
-    document.getElementById("progress").textContent =
-        `Processando ${files.length} arquivos...`;
+function renderPreview(rows){
+  if(!rows.length){
+    previewEl.innerHTML = "<p>Nenhuma linha encontrada.</p>";
+    return;
+  }
 
-    for (const f of files) {
-        log(`Lendo ${f.name}`);
+  const cols = Object.keys(rows[0]);
+  let html = "<table><thead><tr>";
 
-        try {
-            const buf = await f.arrayBuffer();
-            const text = await extractTextFromPDF(buf);
+  cols.forEach(c => html += `<th>${c}</th>`);
+  html += "</tr></thead><tbody>";
 
-            const rows = parseRows(text, f.name);
-            log(`Linhas encontradas: ${rows.length}`);
+  rows.slice(0,50).forEach(r=>{
+    html += "<tr>";
+    cols.forEach(c => html += `<td>${r[c] ?? ""}</td>`);
+    html += "</tr>";
+  });
 
-            compiledRows.push(...rows);
-        } catch (e) {
-            log("Erro: " + e.message);
-        }
-    }
+  html += "</tbody></table>";
 
-    document.getElementById("progress").textContent =
-        `Concluído — Total: ${compiledRows.length} linhas`;
+  if(rows.length > 50)
+    html += `<p>Mostrando 50 de ${rows.length} linhas...</p>`;
+
+  previewEl.innerHTML = html;
 }
 
-// ===== EVENTOS =====
-document.getElementById("processBtn").addEventListener("click", async () => {
-    const files = [...document.getElementById("files").files];
-    if (!files.length) return alert("Selecione PDFs.");
+function buildExcel(rows){
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Dados");
+  return wb;
+}
 
-    log("Iniciando processamento...");
+processBtn.addEventListener("click", async ()=>{
+  const files = [...filesInput.files];
 
-    await processFiles(files);
-    renderPreview(compiledRows);
+  if(!files.length){
+    alert("Selecione PDFs.");
+    return;
+  }
 
-    if (compiledRows.length) {
-        workbookBinary = buildExcel(compiledRows);
-        document.getElementById("downloadBtn").disabled = false;
-        log("Excel pronto para download.");
-    } else {
-        log("Nenhuma linha encontrada.");
-    }
+  processBtn.disabled = true;
+  downloadBtn.disabled = true;
+
+  log("Processando...");
+
+  await processFiles(files);
+  renderPreview(compiled);
+
+  if(compiled.length){
+    workbookBinary = buildExcel(compiled);
+    downloadBtn.disabled = false;
+    log("Excel pronto para download.");
+  }
+
+  processBtn.disabled = false;
 });
 
-document.getElementById("downloadBtn").addEventListener("click", () => {
-    if (!workbookBinary) return;
+downloadBtn.addEventListener("click", ()=>{
+  if(!workbookBinary) return;
 
-    const filename = "compilado.xlsx";
-    XLSX.writeFile(workbookBinary, filename);
-    log("Arquivo salvo: " + filename);
+  const fname = "compilado_" + new Date().toISOString().slice(0,10) + ".xlsx";
+  XLSX.writeFile(workbookBinary, fname);
+  log("Download realizado: " + fname);
 });
 </script>
 
