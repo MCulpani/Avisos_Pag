@@ -140,12 +140,7 @@ async function processFiles(files){
     log(`Linhas encontradas: ${rows.length}`);
 
     // Completar metadados corretamente
-    rows.forEach(r => {
-      r["Local"] = local;
-      r["Nome da Origem"] = f.name;
-    });
-
-    compiled.push(...rows);
+    (...rows);
   }
 
   if(!compiled.length){
