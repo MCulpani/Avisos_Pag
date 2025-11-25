@@ -1,169 +1,155 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Compilar PDFs → Excel</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f7fafc; padding:24px; }
-    .card { background:white; padding:20px; border-radius:10px; box-shadow:0 4px 10px rgba(0,0,0,0.1); max-width:900px; margin:auto; }
-    button { padding:10px 16px; border:0; background:#0ea5a4; color:white; border-radius:6px; cursor:pointer; }
-    button[disabled]{opacity:0.5;cursor:not-allowed;}
-    table{width:100%;border-collapse:collapse;margin-top:12px;}
-    th,td{padding:6px;border-bottom:1px solid #ddd;}
-    pre{background:#222;color:#0f0;padding:12px;border-radius:6px;max-height:150px;overflow:auto;}
-  </style>
-</head>
-<body>
-<div class="card">
-  <h2>Compilar PDFs → Excel (inline version)</h2>
-  <input id="files" type="file" accept="application/pdf" multiple />
-  <br/>
-  <button id="processBtn">Processar e gerar Excel</button>
-  <button id="downloadBtn" disabled>Baixar Excel</button>
-  <p id="progress"></p>
-  <div id="preview"></div>
-  <h3>Logs</h3>
-  <pre id="log">Pronto.</pre>
-</div>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Processar Avisos de Pagamento</title>
 
 <!-- PDF.js -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-<script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
-</script>
 
-<!-- XLSX -->
+<!-- SheetJS (Excel) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f5f5f5;
+    padding: 20px;
+}
+.container {
+    max-width: 800px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+}
+button {
+    padding: 12px 20px;
+    background: #0066ff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 20px;
+}
+button:hover {
+    background: #0044aa;
+}
+.log-box {
+    margin-top: 20px;
+    padding: 15px;
+    background: #111;
+    color: #0f0;
+    height: 300px;
+    overflow-y: auto;
+    font-family: monospace;
+    white-space: pre-wrap;
+    border-radius: 5px;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+    <h2>Processador de Avisos de Pagamento</h2>
+
+    <p>Selecione os PDFs:</p>
+    <input type="file" id="pdfs" accept="application/pdf" multiple />
+
+    <button onclick="processarPDFs()">Processar e gerar Excel</button>
+
+    <div class="log-box" id="log"></div>
+</div>
+
 <script>
-// FULL JAVASCRIPT INLINE
-const filesInput=document.getElementById("files");
-const processBtn=document.getElementById("processBtn");
-const downloadBtn=document.getElementById("downloadBtn");
-const logEl=document.getElementById("log");
-const progressEl=document.getElementById("progress");
-const previewEl=document.getElementById("preview");
-
-let compiledRows=[];
-let workbookBinary=null;
-
-function log(m){
-  logEl.textContent = "["+(new Date().toLocaleTimeString())+"] "+m+"\n"+logEl.textContent;
+function log(msg) {
+    document.getElementById("log").textContent += msg + "\n";
 }
 
-async function extractTextFromPDF(buffer){
-  const pdf=await pdfjsLib.getDocument({data:buffer}).promise;
-  let text="";
-  for(let i=1;i<=pdf.numPages;i++){
-    const page=await pdf.getPage(i);
-    const content=await page.getTextContent();
-    text+=content.items.map(i=>i.str).join(" ")+"\n";
-  }
-  return text;
-}
+async function extractTextFromPDF(file) {
+    log(`📄 Lendo ${file.name}`);
 
-function parseCurrency(t){
-  if(!t) return null;
-  t=t.replace(/[R$\s]/g,"");
-  if(t.includes(".") && t.includes(",")) t=t.replace(/\./g,"").replace(",",".");
-  else if(t.includes(",")) t=t.replace(",",".");
-  t=t.replace(/[^0-9.\-]/g,"");
-  const v=parseFloat(t);
-  return isNaN(v)?null:v;
-}
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-function parseDateBR(token){
-  const m=token.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
-  if(!m) return null;
-  return m[3]+"-"+m[2]+"-"+m[1];
-}
+    let fullText = "";
 
-function parsePdf(text){
-  const lines=text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
-  const r=[];
-  const regex=/^(\d+)\s+(\S+)\s+(\d{2}\.\d{2}\.\d{4})\s+([\d\.,]+)\s+([\d\.,]+)$/;
-  for(const L of lines){
-    const m=L.match(regex);
-    if(!m) continue;
-    if(!m[1].startsWith("5")) continue;
-    r.push({
-      "Column1.1":parseInt(m[1]),
-      "Column1.2":m[2],
-      "Column2":parseDateBR(m[3]),
-      "Column3":parseCurrency(m[4]),
-      "Column4":parseCurrency(m[5]),
-      "__line":L
-    });
-  }
-  return r;
-}
-
-async function processFiles(files){
-  compiledRows=[];
-  for(let i=0;i<files.length;i++){
-    const f=files[i];
-    progressEl.textContent=`Processando ${i+1}/${files.length}: ${f.name}`;
-    log("Lendo "+f.name);
-    try{
-      const buf=await f.arrayBuffer();
-      const text=await extractTextFromPDF(buf);
-      const rows=parsePdf(text);
-      compiledRows.push(...rows.map(r=>({...r,"Nome da Origem":f.name})));
-      log("Linhas encontradas: "+rows.length);
-    }catch(e){
-      log("Erro lendo "+f.name+" → "+e.message);
+    for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        const strings = content.items.map(s => s.str);
+        fullText += strings.join(" ") + "\n";
     }
-  }
+
+    return fullText;
 }
 
-function renderPreview(rows){
-  if(rows.length===0){
-    previewEl.innerHTML="<p>Nenhuma linha encontrada.</p>";
-    return;
-  }
-  const k=["Nome da Origem","Column1.1","Column1.2","Column2","Column3","Column4"];
-  let html="<table><thead><tr>"+k.map(x=>"<th>"+x+"</th>").join("")+"</tr></thead><tbody>";
-  rows.slice(0,100).forEach(r=>{
-    html+="<tr>"+k.map(x=>"<td>"+(r[x]??"")+"</td>").join("")+"</tr>";
-  });
-  html+="</tbody></table>";
-  previewEl.innerHTML=html;
+async function processarPDFs() {
+    const input = document.getElementById("pdfs");
+    if (!input.files.length) {
+        alert("Selecione arquivos PDF");
+        return;
+    }
+
+    log("🔍 Iniciando leitura...");
+
+    const rows = [];
+
+    const regex = /(5\d{9})\s+(\d{9}-\d{3})\s+(\d{2}\.\d{2}\.\d{4})\s+([\d\.,]+)\s+([\d\.,]+)/g;
+
+    for (const pdf of input.files) {
+        const text = await extractTextFromPDF(pdf);
+
+        let matchCount = 0;
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            matchCount++;
+            rows.push({
+                SAP: match[1],
+                NF: match[2],
+                Data: match[3],
+                Desconto: match[4].replace(".", "").replace(",", "."),
+                Montante: match[5].replace(".", "").replace(",", "."),
+                OrigemPDF: pdf.name
+            });
+        }
+
+        log(`✔ ${matchCount} linhas extraídas de ${pdf.name}\n`);
+    }
+
+    if (rows.length === 0) {
+        log("❌ Nenhuma linha encontrada. Verifique os PDFs.");
+        alert("Nenhuma linha válida foi encontrada!");
+        return;
+    }
+
+    log(`Total final de linhas: ${rows.length}`);
+
+    gerarExcel(rows);
 }
 
-function buildExcel(rows){
-  const clean=rows.map(r=>({
-    "Nome da Origem":r["Nome da Origem"],
-    "Column1.1":r["Column1.1"],
-    "Column1.2":r["Column1.2"],
-    "Column2":r["Column2"],
-    "Column3":r["Column3"],
-    "Column4":r["Column4"]
-  }));
-  const ws=XLSX.utils.json_to_sheet(clean);
-  const wb=XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb,ws,"Dados");
-  return wb;
+function gerarExcel(rows) {
+    log("📦 Gerando Excel...");
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dados");
+
+    const data = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+
+    const blob = new Blob([data], { type: "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "avisos_pagamento.xlsx";
+    a.click();
+
+    URL.revokeObjectURL(url);
+
+    log("🎉 Excel gerado com sucesso!");
 }
-
-processBtn.onclick=async ()=>{
-  const files=[...filesInput.files];
-  if(!files.length){alert("Selecione PDFs");return;}
-  downloadBtn.disabled=true;
-  await processFiles(files);
-  renderPreview(compiledRows);
-  if(compiledRows.length>0){
-    workbookBinary=buildExcel(compiledRows);
-    downloadBtn.disabled=false;
-    log("Excel pronto.");
-  }else{
-    log("Nenhuma linha encontrada.");
-  }
-};
-
-downloadBtn.onclick=()=>{
-  XLSX.writeFile(workbookBinary,"compilado.xlsx");
-};
 </script>
 </body>
 </html>
