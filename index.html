@@ -2,32 +2,71 @@
 <html lang="pt-BR">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PDF → Excel (única aba) — Compilador</title>
+
   <style>
-    body { font-family: Inter, Arial, sans-serif; background:#f7fafc; color:#0f172a; padding:24px; }
-    .card { background:white; border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,0.06); padding:18px; max-width:980px; margin:0 auto }
-    h1 { margin:0 0 8px 0; font-size:20px }
-    p { margin:6px 0 12px 0; color:#475569 }
-    input[type=file] { display:block; margin-bottom:12px }
-    button { padding:10px 14px; border-radius:8px; border:0; background:#0ea5a4; color:white; cursor:pointer }
-    button[disabled] { opacity:0.6; cursor:not-allowed }
-    table { width:100%; border-collapse:collapse; margin-top:12px }
-    th,td { text-align:left; padding:6px 8px; border-bottom:1px solid #eef2f7; font-size:13px }
-    pre { background:#0b1220; color:#d1fae5; padding:12px; border-radius:8px; overflow:auto }
-    .progress { margin-top:8px }
+    body {
+      font-family: Inter, Arial, sans-serif;
+      background: #f7fafc;
+      color: #0f172a;
+      padding: 24px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(15,23,42,0.06);
+      padding: 18px;
+      max-width: 980px;
+      margin: 0 auto;
+    }
+    h1 { margin: 0 0 8px 0; font-size: 20px; }
+    p { margin: 6px 0 12px 0; color: #475569; }
+    input[type=file] { display:block; margin-bottom:12px; }
+    button {
+      padding:10px 14px;
+      border-radius:8px;
+      border:0;
+      background:#0ea5a4;
+      color:white;
+      cursor:pointer;
+    }
+    button[disabled] { opacity:0.6; cursor:not-allowed; }
+
+    table { width:100%; border-collapse:collapse; margin-top:12px; }
+    th, td {
+      text-align:left;
+      padding:6px 8px;
+      border-bottom:1px solid #eef2f7;
+      font-size:13px;
+    }
+    pre {
+      background:#0b1220;
+      color:#d1fae5;
+      padding:12px;
+      border-radius:8px;
+      overflow:auto;
+    }
+    .progress { margin-top:8px; }
   </style>
 </head>
+
 <body>
   <div class="card">
     <h1>Compilar vários PDFs em um único Excel (uma aba)</h1>
-    <p>Selecione vários arquivos PDF. O script tentará extrair linhas que começam com <code>5</code> (como no seu Power Query) e montar as colunas: <strong>Column1.1, Column1.2, Column2, Column3, Column4</strong>. Ao final será gerado um .xlsx com 1 aba.</p>
+
+    <p>
+      Selecione vários arquivos PDF. O script extrairá as linhas dos documentos e criará um
+      arquivo Excel com 1 aba contendo todas as linhas processadas.
+    </p>
 
     <input id="files" type="file" accept="application/pdf" multiple />
+
     <div>
       <button id="processBtn">Processar e gerar Excel</button>
       <button id="downloadBtn" disabled>Baixar Excel</button>
     </div>
+
     <div class="progress" id="progress"></div>
 
     <div id="preview"></div>
@@ -36,11 +75,11 @@
     <pre id="log">Pronto.</pre>
   </div>
 
-  <!-- Dependências: pdf.js e SheetJS via CDN -->
+  <!-- Dependências necessárias -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
-  <!-- Script externo -->
+  <!-- Código principal -->
   <script src="script.js"></script>
 </body>
 </html>
