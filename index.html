@@ -77,6 +77,18 @@ const rowRegex = /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+
 function parseCurrency(v){ if(!v) return null; return parseFloat(v.replace(/\./g,"").replace(",",".")); }
 function parseDateBR(d){ const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/); return m ? `${m[1]}/${m[2]}/${m[3]}` : ""; }
 
+function getCodigoFilial(local){
+  switch(local){
+    case "JOINVILLE - SC": return "500001102";
+    case "CASTRO - PR": return "500001855";
+    case "CONTAGEM - MG": return "500001459";
+    case "ESCADA - PE": return "500001122";
+    case "RIO CLARO - SP": return "500001131";
+    case "SIMOES FILHO - BA": return "500001405";
+    default: return "";
+  }
+}
+
 function extractRows(txt, local, documento){
   let rows = [], m;
   while((m = rowRegex.exec(txt)) !== null){
