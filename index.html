@@ -12,10 +12,9 @@
     h1 { margin-top:0; font-size:20px; }
     button { padding:10px 16px; border:0; border-radius:8px; background:#0ea5a4; color:white; cursor:pointer; }
     button[disabled] { opacity:0.6; cursor:not-allowed; }
+    #log { background:#0f172a; color:#d1fae5; padding:12px; border-radius:6px; height:200px; overflow:auto; }
     table { width:100%; border-collapse:collapse; margin-top:18px; }
     th,td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
-    #progressContainer { width:100%; background:#e5e7eb; height:14px; border-radius:8px; overflow:hidden; margin-top:16px; }
-    #progressBar { height:100%; width:0%; background:#0ea5a4; transition:width .3s; }
   </style>
 
   <!-- pdf.js -->
@@ -36,7 +35,8 @@
   <button id="processBtn">Processar e gerar Excel</button>
   <button id="downloadBtn" disabled>Baixar Excel</button>
 
-  <div id="progressContainer"><div id="progressBar"></div></div>
+  <h3>Logs</h3>
+  <pre id="log">Pronto.</pre>
 
   <div id="preview"></div>
 </div>
@@ -48,19 +48,20 @@ pdfjsLib.GlobalWorkerOptions.workerSrc =
 const filesInput = document.getElementById("files");
 const processBtn = document.getElementById("processBtn");
 const downloadBtn = document.getElementById("downloadBtn");
+const logEl = document.getElementById("log");
 const previewEl = document.getElementById("preview");
-const progressBar = document.getElementById("progressBar");
 
 let compiled = [];
 let workbookBinary = null;
 
-function updateProgress(pct){
-  progressBar.style.width = pct + "%";
+function log(msg){
+  logEl.textContent = `[${new Date().toLocaleTimeString()}] ${msg}\n` + logEl.textContent;
 }
 
 async function extractText(file){
   const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({data:buf}).promise;
+
   let text = "";
   for(let i=1;i<=pdf.numPages;i++){
     const page = await pdf.getPage(i);
@@ -70,33 +71,60 @@ async function extractText(file){
   return text;
 }
 
-// captura "Documento <número>" (case-insensitive)
-function extractDocumento(text){
-  const m = text.match(/Documento\s+(\d{6,})/i);
-  return m ? m[1] : "";
+// Regex incluindo final -U
+const locations = ["JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG","ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"];
+function detectLocation(text){
+  for(const loc of locations){ if(text.includes(loc)) return loc; }
+  return "";
 }
 
-// Regex que aceita NF terminando em números ou 'U'
 const rowRegex =
   /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d\.,]+)\s+([\d\.,]+)/g;
 
-function parseCurrency(v){ if(!v) return null; return parseFloat(v.replace(/\./g,"").replace(",", ".")); }
+function parseCurrency(v){
+  if(!v) return null;
+  let t = v.replace(/\./g,"").replace(",",".");
+  return parseFloat(t);
+}
+
 function parseDateBR(d){
   const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-  return m ? `${m[1]}/${m[2]}/${m[3]}` : null;
+  if(!m) return null;
+  return `${m[1]}/${m[2]}/${m[3]}`; // <-- agora com /
 }
+
 function formatBRL(value){
   if(value == null || isNaN(value)) return "";
   return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
-function extractRows(text){
-  let out = []; let m;
+// Detectar LOCAL no PDF
+const LOCATIONS = ["JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG","ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"];
+function detectLocation(txt){
+  for(const L of LOCATIONS){ if(txt.includes(L)) return L; }
+  return "";
+}
+
+// Detectar LOCAL no PDF
+const LOCATIONS = ["JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG","ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"];
+function detectLocation(txt){
+  for(const L of LOCATIONS){ if(txt.includes(L)) return L; }
+  return "";
+}
+
+function extractRows(text, location){
+  let out = [];
+  let m;
+  const local = detectLocation(text);
   while((m = rowRegex.exec(text)) !== null){
     out.push({
+      "Local": location,
+      "Documento": documento,
+      "Local": local,
+      "Local": location,
       "Nº doc SAP": m[1],
-      "NF": String(m[2]).trim(),
-      "Data": parseDateBR(m[3]),
+      "NF": m[2],
+      "Data": parseDateBR(m[3]), // <-- agora com barra
       "Desconto": parseCurrency(m[4]),
       "Montante bruto": parseCurrency(m[5])
     });
@@ -106,45 +134,82 @@ function extractRows(text){
 
 async function processFiles(files){
   compiled = [];
-  const total = files.length;
-  for(let i=0;i<total;i++){
-    const f = files[i];
-    updateProgress(Math.round((i/total)*100));
+
+  for(const f of files){
+    log(`Lendo ${f.name} ...`);
     const txt = await extractText(f);
-    const documento = extractDocumento(txt);
-    const rows = extractRows(txt);
+
+    // Detectar LOCAL
+    let local = "";
+    const locais = [
+      "JOINVILLE - SC",
+      "CASTRO - PR",
+      "CONTAGEM - MG",
+      "ESCADA - PE",
+      "RIO CLARO - SP",
+      "SIMOES FILHO - BA"
+    ];
+    for(const L of locais){
+      if(txt.includes(L)){ local = L; break; }
+    }
+
+    // Extrair linhas
+    const rows = extractRows(txt, local);
+    log(`Linhas encontradas: ${rows.length}`);
+
+    // Completar metadados corretamente
     rows.forEach(r => {
-      r["Documento"] = documento;
-      r["Nome da Origem"] = f.name;
-    });
-    compiled.push(...rows);
+  r["Local"] = local;
+  r["Nome da Origem"] = f.name;
+});
+
+compiled.push(...rows);
   }
-  updateProgress(100);
+
+  if(!compiled.length){
+    log("Nenhuma linha foi encontrada.");
+  }
+}){
+    log("Nenhuma linha foi encontrada.");
+  }
 }
 
 function renderPreview(rows){
-  if(!rows.length){ previewEl.innerHTML = "<p>Nenhuma linha encontrada.</p>"; return; }
+  if(!rows.length){
+    previewEl.innerHTML = "<p>Nenhuma linha encontrada.</p>";
+    return;
+  }
+
   const cols = Object.keys(rows[0]);
   let html = "<table><thead><tr>";
+
   cols.forEach(c => html += `<th>${c}</th>`);
   html += "</tr></thead><tbody>";
+
   rows.slice(0,50).forEach(r=>{
     html += "<tr>";
     cols.forEach(c => {
       let val = r[c];
-      if(c === "Montante bruto" || c === "Desconto") val = formatBRL(val);
+      if(c === "Montante bruto" || c === "Desconto"){
+        val = formatBRL(val);
+      }
       html += `<td>${val ?? ""}</td>`;
     });
     html += "</tr>";
   });
+
   html += "</tbody></table>";
-  if(rows.length > 50) html += `<p>Mostrando 50 de ${rows.length} linhas...</p>`;
+
+  if(rows.length > 50)
+    html += `<p>Mostrando 50 de ${rows.length} linhas...</p>`;
+
   previewEl.innerHTML = html;
 }
 
 function buildExcel(rows){
-  // ensure column order: Documento first
-  const clean = rows.map(r => ({
+  // Reordenar colunas (Opção A)
+  const exportRows = rows.map(r => ({
+    "Local": r["Local"],
     "Documento": r["Documento"],
     "Nº doc SAP": r["Nº doc SAP"],
     "NF": r["NF"],
@@ -152,8 +217,13 @@ function buildExcel(rows){
     "Desconto": r["Desconto"],
     "Montante bruto": r["Montante bruto"],
     "Nome da Origem": r["Nome da Origem"]
+  }));(r => ({
+    ...r,
+    "Desconto": r["Desconto"],
+    "Montante bruto": r["Montante bruto"]
   }));
-  const ws = XLSX.utils.json_to_sheet(clean);
+
+  const ws = XLSX.utils.json_to_sheet(exportRows);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Dados");
   return wb;
@@ -161,22 +231,35 @@ function buildExcel(rows){
 
 processBtn.addEventListener("click", async ()=>{
   const files = [...filesInput.files];
-  if(!files.length){ alert("Selecione PDFs."); return; }
+
+  if(!files.length){
+    alert("Selecione PDFs.");
+    return;
+  }
+
   processBtn.disabled = true;
   downloadBtn.disabled = true;
+
+  log("Processando...");
+
   await processFiles(files);
   renderPreview(compiled);
+
   if(compiled.length){
     workbookBinary = buildExcel(compiled);
     downloadBtn.disabled = false;
+    log("Excel pronto para download.");
   }
+
   processBtn.disabled = false;
 });
 
 downloadBtn.addEventListener("click", ()=>{
   if(!workbookBinary) return;
+
   const fname = "compilado_" + new Date().toISOString().slice(0,10) + ".xlsx";
   XLSX.writeFile(workbookBinary, fname);
+  log("Download realizado: " + fname);
 });
 </script>
 
