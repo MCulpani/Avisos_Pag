@@ -1,30 +1,34 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Compilar Avisos de Pagamento → Excel</title>
-  <style>
-    body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0; padding:24px; }
-    .card { background:#fff; max-width:900px; margin:auto; padding:24px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.08); }
-    h1 { margin-top:0; font-size:20px; }
-    button { padding:10px 16px; border:0; border-radius:8px; background:#0ea5a4; color:white; cursor:pointer; }
-    button[disabled] { opacity:0.6; cursor:not-allowed; }
-    table { width:100%; border-collapse:collapse; margin-top:18px; }
-    th,td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
-  </style>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Compilar Avisos de Pagamento → Excel</title>
+
+<style>
+ body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0; padding:24px; }
+ .card { background:#fff; max-width:900px; margin:auto; padding:24px; border-radius:12px;
+         box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+ button { padding:10px 16px; border:0; border-radius:8px; background:#0ea5a4; color:white; cursor:pointer; }
+ #preview table { width:100%; border-collapse:collapse; margin-top:18px; }
+ #preview th,#preview td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="card">
   <h1>Compilar PDFs de Aviso de Pagamento → Excel</h1>
+
   <input id="files" type="file" accept="application/pdf" multiple />
   <br><br>
   <button id="processBtn">Processar e gerar Excel</button>
   <button id="downloadBtn" disabled>Baixar Excel</button>
+
   <div id="preview"></div>
 </div>
+
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
@@ -40,7 +44,7 @@ async function extractText(file){
   const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({data: buf}).promise;
   let text = "";
-  for (let i = 1; i <= pdf.numPages; i++){
+  for(let i = 1; i <= pdf.numPages; i++){
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     text += content.items.map(x => x.str).join(" ") + "\n";
@@ -48,18 +52,20 @@ async function extractText(file){
   return text;
 }
 
-const LOCATIONS = ["JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG","ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"]; 
-function detectLocation(txt){ for(const L of LOCATIONS) if(txt.includes(L)) return L; return ""; }
+const LOCATIONS = ["JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG","ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"];
+function detectLocation(txt){
+  return LOCATIONS.find(L => txt.includes(L)) || "";
+}
 
 const rowRegex = /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
-function parseCurrency(v){ if(!v) return null; return parseFloat(v.replace(/\./g,"").replace(",",".")); }
-function parseDateBR(d){ const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/); return m ? `${m[1]}/${m[2]}/${m[3]}` : null; }
+unction parseCurrency(v){ return parseFloat(v.replace(/\./g,"").replace(",",".")); }
+function parseDateBR(d){ const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/); return m ? `${m[1]}/${m[2]}/${m[3]}` : ""; }
 
-function extractRows(txt, location, documento){
+function extractRows(txt, local, documento){
   let out = [], m;
   while((m = rowRegex.exec(txt)) !== null){
     out.push({
-      "Local": location,
+      "Local": local,
       "Documento": documento,
       "Nº doc SAP": m[1],
       "NF": m[2],
@@ -73,17 +79,26 @@ function extractRows(txt, location, documento){
 
 async function processFiles(files){
   compiled = [];
-
   for(const f of files){
     const txt = await extractText(f);
     const local = detectLocation(txt);
     const docMatch = txt.match(/Documento\s+(\d{6,})/);
     const documento = docMatch ? docMatch[1] : "";
-
     const rows = extractRows(txt, local, documento);
     rows.forEach(r => r["Nome da Origem"] = f.name);
     compiled.push(...rows);
   }
+}
+
+function renderPreview(rows){
+  if(!rows.length){ previewEl.innerHTML = "<p>Nenhum dado encontrado.</p>"; return; }
+  const cols = Object.keys(rows[0]);
+  let html = "<table><thead><tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr></thead><tbody>";
+  rows.slice(0,30).forEach(r =>{
+    html += "<tr>" + cols.map(c => `<td>${r[c] ?? ""}</td>`).join("") + "</tr>";
+  });
+  html += "</tbody></table>";
+  previewEl.innerHTML = html;
 }
 
 function buildExcel(rows){
@@ -93,25 +108,22 @@ function buildExcel(rows){
   return wb;
 }
 
-processBtn.addEventListener("click", async () => {
+processBtn.addEventListener("click", async () =>{
   const files = [...filesInput.files];
-  if (!files.length){ alert("Selecione PDFs."); return; }
+  if(!files.length){ alert("Selecione PDFs."); return; }
   processBtn.disabled = true;
   downloadBtn.disabled = true;
-
   await processFiles(files);
-
-  if (compiled.length){
-    workbookBinary = buildExcel(compiled);
-    downloadBtn.disabled = false;
-  }
+  renderPreview(compiled);
+  if(compiled.length){ workbookBinary = buildExcel(compiled); downloadBtn.disabled = false; }
   processBtn.disabled = false;
 });
 
-downloadBtn.addEventListener("click", () => {
-  if (!workbookBinary) return;
+downloadBtn.addEventListener("click", ()=>{
+  if(!workbookBinary) return;
   XLSX.writeFile(workbookBinary, "compilado_" + new Date().toISOString().slice(0,10) + ".xlsx");
 });
 </script>
+
 </body>
 </html>
