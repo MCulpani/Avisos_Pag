@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Compilar Avisos de Pagamento → Excel</title>
+<title>Conversor de Aviso de Pagamento - PDF > Excel</title>
 
 <style>
  body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0; padding:24px; }
@@ -22,14 +22,14 @@
 </head>
 <body>
 <div class="card">
-  <h1>Compilar PDFs de Aviso de Pagamento → Excel</h1>
+  <h1>Conversor de Aviso de Pagamento - PDF > Excel</h1>
 
   <input id="files" type="file" accept="application/pdf" multiple />
   <br><br>
-  <button id="processBtn">Processar e gerar Excel</button>
+  <button id="processBtn">Compilar e Transformar</button>
   <button id="downloadBtn" disabled>Baixar Excel</button>
 
-  <div id="dashboardBox">Total Montante Bruto: R$ 0,00</div>
+  <div id="dashboardBox">Total em Avisos: R$ 0,00</div>
 
   <div id="progressContainer"><div id="progressBar"></div></div>
 
@@ -97,7 +97,7 @@ function extractRows(txt, local, documento){
       "Código filial": getCodigoFilial(local),
       "Documento": documento,
       "Nº doc SAP": m[1],
-      "NF": m[2],
+      "Doc Referência": m[2],
       "Data": parseDateBR(m[3]),
       "Desconto": parseCurrency(m[4]),
       "Montante bruto": parseCurrency(m[5])
@@ -128,7 +128,7 @@ async function processFiles(files){
 
 function updateDashboard(rows){
   const total = rows.reduce((sum, r) => sum + (r["Montante bruto"] || 0), 0);
-  dashboardBox.textContent = "Total Montante Bruto: " + total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  dashboardBox.textContent = "Total em Avisos: " + total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 }
 
 function renderPreview(rows){
