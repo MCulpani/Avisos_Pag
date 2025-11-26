@@ -26,6 +26,10 @@
   <button id="processBtn">Processar e gerar Excel</button>
   <button id="downloadBtn" disabled>Baixar Excel</button>
 
+  <div id="dashboardBox">Total Montante Bruto: R$ 0,00</div>
+
+  <div id="progressContainer"><div id="progressBar"></div></div>
+
   <div id="preview"></div>
 </div>
 
@@ -100,7 +104,15 @@ async function processFiles(files){
     const rows = extractRows(txt, local, documento);
     rows.forEach(r => r["Nome da Origem"] = f.name);
     compiled.push(...rows);
+
+processed++;
+    progressBar.style.width = ((processed / files.length) * 100) + "%";
   }
+}
+
+function updateDashboard(rows){
+  const total = rows.reduce((sum, r) => sum + (r["Montante bruto"] || 0), 0);
+  dashboardBox.textContent = "Total Montante Bruto: " + total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 }
 
 function renderPreview(rows){
