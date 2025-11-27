@@ -7,20 +7,147 @@
 
 <style>
  body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0; padding:24px; }
- .card { background:#fff; max-width:1000px; margin:auto; padding:24px; border-radius:12px;
-         box-shadow:0 4px 12px rgba(0,0,0,0.08); }
+
+ /* Área de login */
+ #login-area {
+   max-width: 400px;
+   margin: 40px auto;
+   padding: 25px;
+   background: #fff;
+   border-radius: 12px;
+   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+ }
+ #login-area input {
+   width: 100%;
+   padding: 12px;
+   margin-bottom: 12px;
+   font-size: 16px;
+   border: 1px solid #ccc;
+   border-radius: 6px;
+ }
+ #login-area button {
+   width: 100%;
+   padding: 12px;
+   font-size: 16px;
+   background: #0ea5a4;
+   color: white;
+   border: none;
+   border-radius: 8px;
+   cursor: pointer;
+   margin-top: 8px;
+ }
+ #login-msg { color: red; font-size: 14px; }
+
+ /* App */
+ .card {
+   background:#fff; max-width:1000px; margin:auto; padding:24px; border-radius:12px;
+   box-shadow:0 4px 12px rgba(0,0,0,0.08);
+ }
  button { padding:10px 16px; border:0; border-radius:8px; background:#0ea5a4; color:white; cursor:pointer; }
  #preview table { width:100%; border-collapse:collapse; margin-top:18px; }
  #preview th,#preview td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
  #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:18px; display:none; }
  #progressBar{ height:100%; width:0%; background:#0ea5a4; border-radius:6px; transition:width .25s; }
  #dashboardBox{ margin-top:18px; padding:16px; background:#fff3cd; border:2px solid #ffca2c; border-radius:8px; font-size:20px; font-weight:bold; color:#8a6d3b; }
+
+ #btnLogout {
+   margin-top:20px;
+   background:#ff5252 !important;
+ }
 </style>
+
+<!-- Firebase + Lógica de Login -->
+<script type="module">
+/* ---------------------------------------------------- */
+/* 1. IMPORTAÇÕES Firebase (não altere)                  */
+/* ---------------------------------------------------- */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getAuth,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+/* ---------------------------------------------------- */
+/* 2. CONFIGURAÇÃO DO FIREBASE (EDITE AQUI!)            */
+/* ---------------------------------------------------- */
+const firebaseConfig = {
+  apiKey: "AIzaSyC_FD33WikHRUVCd2JtH_ok3WF1YtfAFhU",
+  authDomain: "conversor-de-avisos.firebaseapp.com",
+  projectId: "conversor-de-avisos",
+  storageBucket: "conversor-de-avisos.firebasestorage.app",
+  messagingSenderId: "1099286231450",
+  appId: "1:1099286231450:web:94e0b02dec2ef6b0d26223"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+/* ---------------------------------------------------- */
+/* 3. CONTROLE DE ACESSO (LOGIN / LOGOUT / PROTEÇÃO)    */
+/* ---------------------------------------------------- */
+
+const loginBox = document.getElementById("login-area");
+const appBox   = document.getElementById("app-area");
+const msgLogin = document.getElementById("login-msg");
+
+const emailInput = document.getElementById("email");
+const passInput  = document.getElementById("password");
+const btnLogin   = document.getElementById("btnLogin");
+const btnLogout  = document.getElementById("btnLogout");
+
+/* LOGIN */
+btnLogin.addEventListener("click", async () => {
+  const email = emailInput.value.trim();
+  const pass  = passInput.value;
+
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+    msgLogin.textContent = "";
+  } catch (err) {
+    msgLogin.textContent = "Erro: " + err.message;
+  }
+});
+
+/* LOGOUT */
+btnLogout.addEventListener("click", async () => {
+  await signOut(auth);
+});
+
+/* PROTEÇÃO DO APP */
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    loginBox.style.display = "none";
+    appBox.style.display = "block";
+  } else {
+    loginBox.style.display = "block";
+    appBox.style.display = "none";
+  }
+});
+</script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+
+<!-- ============================================== -->
+<!--                ÁREA DE LOGIN                   -->
+<!-- ============================================== -->
+<div id="login-area" style="display:none;">
+  <h2>Acessar</h2>
+  <input id="email" type="email" placeholder="Email" />
+  <input id="password" type="password" placeholder="Senha" />
+  <button id="btnLogin">Entrar</button>
+  <p id="login-msg"></p>
+</div>
+
+<!-- ============================================== -->
+<!--                ÁREA DO APLICATIVO              -->
+<!-- ============================================== -->
+<div id="app-area" style="display:none;">
+
 <div class="card">
   <h1>Conversor de Aviso de Pagamento - PDF > Excel</h1>
 
@@ -34,8 +161,15 @@
   <div id="progressContainer"><div id="progressBar"></div></div>
 
   <div id="preview"></div>
+
+  <button id="btnLogout">Sair da conta</button>
 </div>
 
+</div><!-- fim app-area -->
+
+<!-- ============================================== -->
+<!--      SEU SCRIPT ORIGINAL (sem alterar nada)    -->
+<!-- ============================================== -->
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
