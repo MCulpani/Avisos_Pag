@@ -17,20 +17,23 @@
    border-radius: 12px;
    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
  }
-#login-area input {
-  width: 100%;
-  padding: 12px;
-  margin-bottom: 12px;
-  font-size: 16px;
-  border: none;              /* Sem borda – igual ao botão */
-  border-radius: 8px;        /* Mesma curvatura */
-  background: #f1f5f9;       /* Fundo suave */
-  outline: none;             /* Remove highlight azul */
-}
 
-#login-area input:focus {
-  outline: 2px solid #0ea5a4; /* Igual ao hover do botão */
+ /* CAMPOS DE LOGIN – iguais ao botão entrar */
+ #login-area input {
+   width: 100%;
+   padding: 12px;
+   margin-bottom: 12px;
+   font-size: 16px;
+   border: none;                /* sem borda — igual ao botão */
+   border-radius: 8px;          /* mesma borda arredondada */
+   background: #f1f5f9;         /* fundo suave */
+   outline: none;               /* remove highlight padrão */
  }
+
+ #login-area input:focus {
+   outline: 2px solid #0ea5a4;   /* visual clean e fino */
+ }
+
  #login-area button {
    width: 100%;
    padding: 12px;
@@ -42,6 +45,7 @@
    cursor: pointer;
    margin-top: 8px;
  }
+
  #login-msg { color: red; font-size: 14px; }
 
  /* App */
@@ -49,7 +53,14 @@
    background:#fff; max-width:1000px; margin:auto; padding:24px; border-radius:12px;
    box-shadow:0 4px 12px rgba(0,0,0,0.08);
  }
- button { padding:10px 16px; border:0; border-radius:8px; background:#0ea5a4; color:white; cursor:pointer; }
+ button {
+   padding:10px 16px;
+   border:0;
+   border-radius:8px;
+   background:#0ea5a4;
+   color:white;
+   cursor:pointer;
+ }
  #preview table { width:100%; border-collapse:collapse; margin-top:18px; }
  #preview th,#preview td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
  #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:18px; display:none; }
@@ -166,10 +177,11 @@ onAuthStateChanged(auth, (user) => {
 </script>
 
 <!-- ============================================== -->
-<!--      SCRIPT DO SEU APLICATIVO (INALTERADO)     -->
+<!--      SCRIPT DO APLICATIVO (INALTERADO)         -->
 <!-- ============================================== -->
 <script>
-pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
 const filesInput = document.getElementById("files");
 const processBtn = document.getElementById("processBtn");
@@ -194,7 +206,10 @@ async function extractText(file){
   return text;
 }
 
-const LOCATIONS = ["JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG","ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"];
+const LOCATIONS = [
+  "JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG",
+  "ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"
+];
 
 function detectLocation(txt){
   let clean = txt.replace(/\s+/g, ' ').toUpperCase();
@@ -260,17 +275,26 @@ async function processFiles(files){
 
 function updateDashboard(rows){
   const total = rows.reduce((sum, r) => sum + (r["Montante bruto"] || 0), 0);
-  dashboardBox.textContent = "Total em Avisos: " + total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  dashboardBox.textContent =
+    "Total em Avisos: " +
+    total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
 }
 
 function renderPreview(rows){
-  if(!rows.length){ previewEl.innerHTML = "<p>Nenhum dado encontrado.</p>"; return; }
+  if(!rows.length){
+    previewEl.innerHTML = "<p>Nenhum dado encontrado.</p>";
+    return;
+  }
 
   const cols = Object.keys(rows[0]);
-  let html = "<table><thead><tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr></thead><tbody>";
+  let html = "<table><thead><tr>" +
+             cols.map(c => `<th>${c}</th>`).join("") +
+             "</tr></thead><tbody>";
+
   rows.slice(0,30).forEach(r =>{
     html += "<tr>" + cols.map(c => `<td>${r[c] ?? ""}</td>`).join("") + "</tr>";
   });
+
   html += "</tbody></table>";
   previewEl.innerHTML = html;
 }
@@ -284,7 +308,10 @@ function buildExcel(rows){
 
 processBtn.addEventListener("click", async () =>{
   const files = [...filesInput.files];
-  if(!files.length){ alert("Selecione PDFs."); return; }
+  if(!files.length){
+    alert("Selecione PDFs.");
+    return;
+  }
 
   processBtn.disabled = true;
   downloadBtn.disabled = true;
@@ -294,14 +321,20 @@ processBtn.addEventListener("click", async () =>{
   renderPreview(compiled);
   updateDashboard(compiled);
 
-  if(compiled.length){ workbookBinary = buildExcel(compiled); downloadBtn.disabled = false; }
+  if(compiled.length){
+    workbookBinary = buildExcel(compiled);
+    downloadBtn.disabled = false;
+  }
 
   processBtn.disabled = false;
 });
 
 downloadBtn.addEventListener("click", ()=>{
   if(!workbookBinary) return;
-  XLSX.writeFile(workbookBinary, "compilado_" + new Date().toISOString().slice(0,10) + ".xlsx");
+  XLSX.writeFile(
+    workbookBinary,
+    "compilado_" + new Date().toISOString().slice(0,10) + ".xlsx"
+  );
 });
 </script>
 
