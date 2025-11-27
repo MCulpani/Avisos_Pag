@@ -18,20 +18,21 @@
    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
  }
 
- /* CAMPOS DE LOGIN – iguais ao botão entrar */
+ /* INPUTS IGUAIS AO BOTÃO ENTRAR */
  #login-area input {
    width: 100%;
    padding: 12px;
    margin-bottom: 12px;
    font-size: 16px;
-   border: none;                /* sem borda — igual ao botão */
-   border-radius: 8px;          /* mesma borda arredondada */
-   background: #f1f5f9;         /* fundo suave */
-   outline: none;               /* remove highlight padrão */
+   border: none;
+   border-radius: 8px;
+   background: #0ea5a4; /* mesma cor do botão */
+   color: white;        /* texto igual */
+   box-sizing: border-box;
  }
 
- #login-area input:focus {
-   outline: 2px solid #0ea5a4;   /* visual clean e fino */
+ #login-area input::placeholder {
+   color: #e2e8f0;      /* placeholder parecido com o botão */
  }
 
  #login-area button {
@@ -46,7 +47,7 @@
    margin-top: 8px;
  }
 
- #login-msg { color: red; font-size: 14px; }
+ #login-msg { color: red; font-size: 14px; margin-top: 8px; }
 
  /* App */
  .card {
@@ -114,7 +115,7 @@
 </div><!-- fim app-area -->
 
 <!-- ============================================== -->
-<!--      SCRIPT FIREBASE (CARREGADO POR ÚLTIMO)    -->
+<!--      SCRIPT FIREBASE (FINAL DA PÁGINA)         -->
 <!-- ============================================== -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -219,10 +220,18 @@ function detectLocation(txt){
   return "NÃO IDENTIFICADO";
 }
 
-const rowRegex = /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
+const rowRegex =
+  /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
 
-function parseCurrency(v){ if(!v) return null; return parseFloat(v.replace(/\./g,"").replace(",",".")); }
-function parseDateBR(d){ const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/); return m ? `${m[1]}/${m[2]}/${m[3]}` : ""; }
+function parseCurrency(v){
+  if(!v) return null;
+  return parseFloat(v.replace(/\./g,"").replace(",","."));
+}
+
+function parseDateBR(d){
+  const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  return m ? `${m[1]}/${m[2]}/${m[3]}` : "";
+}
 
 function getCodigoFilial(local){
   switch(local){
@@ -274,7 +283,9 @@ async function processFiles(files){
 }
 
 function updateDashboard(rows){
-  const total = rows.reduce((sum, r) => sum + (r["Montante bruto"] || 0), 0);
+  const total = rows.reduce(
+    (sum, r) => sum + (r["Montante bruto"] || 0), 0
+  );
   dashboardBox.textContent =
     "Total em Avisos: " +
     total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
@@ -292,7 +303,9 @@ function renderPreview(rows){
              "</tr></thead><tbody>";
 
   rows.slice(0,30).forEach(r =>{
-    html += "<tr>" + cols.map(c => `<td>${r[c] ?? ""}</td>`).join("") + "</tr>";
+    html += "<tr>" +
+            cols.map(c => `<td>${r[c] ?? ""}</td>`).join("") +
+            "</tr>";
   });
 
   html += "</tbody></table>";
