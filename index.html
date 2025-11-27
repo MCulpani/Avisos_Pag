@@ -154,10 +154,13 @@
     <input id="files" type="file" accept="application/pdf" multiple />
     <br><br>
 
-    <!-- BOTÕES NA MESMA LINHA -->
-    <div style="display:flex; justify-content: space-between; align-items: center; margin-top:16px;">
+    <!-- BOTÕES: Compilar | Baixar Excel | Logout -->
+    <div style="display:flex; align-items:center; gap:10px; margin-top:16px;">
+      <button id="processBtn" class="app-btn">Compilar e Transformar</button>
       <button id="downloadBtn" class="app-btn" disabled>Baixar Excel</button>
-      <button id="btnLogout" class="app-btn" style="background:#ff5252;">Sair da conta</button>
+      <div style="margin-left:auto;">
+        <button id="btnLogout" class="app-btn" style="background:#ff5252;">Sair da conta</button>
+      </div>
     </div>
 
     <div id="dashboardBox">Total em Avisos: R$ 0,00</div>
