@@ -18,84 +18,87 @@
 
   /* LOGIN MODERNO */
   #login-area {
-    max-width: 380px;
+    max-width: 400px;
     margin: 6vh auto;
-    padding: 40px 30px;
+    padding: 50px 30px;
     background: #ffffff;
-    border-radius: 16px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    border-radius: 20px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.12);
     text-align: center;
+    position: relative;
   }
 
   #login-area h2 {
-    margin-bottom: 28px;
+    margin-bottom: 32px;
     font-weight: 600;
     color: #0f172a;
-    font-size: 24px;
+    font-size: 26px;
   }
 
-  #login-area input {
+  .input-wrapper {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .input-wrapper input {
     width: 100%;
-    padding: 14px 16px;
-    margin-bottom: 16px;
+    padding: 14px 45px 14px 16px;
     font-size: 15px;
     border: 1px solid #cbd5e1;
-    border-radius: 10px;
+    border-radius: 12px;
     background: #f8fafc;
     color: #0f172a;
     box-sizing: border-box;
-    transition: border 0.2s, box-shadow 0.2s;
+    transition: border 0.3s, box-shadow 0.3s;
   }
 
-  #login-area input:focus {
+  .input-wrapper input:focus {
     border-color: #0ea5a4;
     box-shadow: 0 0 0 3px rgba(14, 165, 164, 0.2);
     outline: none;
   }
 
-  #login-area input::placeholder {
+  .input-wrapper input::placeholder {
     color: #94a3b8;
   }
 
-  #login-area button {
-    width: 100%;
-    padding: 14px;
-    font-size: 16px;
-    background: #0ea5a4;
-    color: white;
-    border: none;
-    border-radius: 10px;
+  /* Ícones dentro dos inputs */
+  .input-wrapper i {
+    position: absolute;
+    top: 50%;
+    right: 16px;
+    transform: translateY(-50%);
+    font-style: normal;
+    color: #64748b;
     cursor: pointer;
-    font-weight: 600;
-    transition: background 0.2s, transform 0.1s;
+    user-select: none;
+    font-size: 14px;
   }
 
-  #login-area button:hover {
-    background: #14b8a6;
-    transform: translateY(-1px);
+  /* BOTÃO MODERNO */
+  #btnLogin {
+    width: 100%;
+    padding: 16px;
+    font-size: 16px;
+    background: linear-gradient(90deg,#0ea5a4,#14b8a6);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.3s, transform 0.1s, box-shadow 0.3s;
+  }
+
+  #btnLogin:hover {
+    background: linear-gradient(90deg,#14b8a6,#0ea5a4);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
   }
 
   #login-msg {
     color: #ef4444;
     font-size: 14px;
-    margin-top: 12px;
-  }
-
-  /* Mostrar senha */
-  #password-wrapper {
-    position: relative;
-  }
-
-  #togglePassword {
-    position: absolute;
-    top: 50%;
-    right: 12px;
-    transform: translateY(-50%);
-    background: none;
-    border: none;
-    cursor: pointer;
-    font-size: 14px;
-    color: #64748b;
+    margin-top: 14px;
   }
 
   /* APP */
@@ -127,25 +130,25 @@
 </head>
 <body>
 
-<!-- ============================================== -->
-<!--                ÁREA DE LOGIN                   -->
-<!-- ============================================== -->
+<!-- LOGIN -->
 <div id="login-area" style="display:block;">
   <h2>Entrar na Plataforma</h2>
-  <input id="email" type="email" placeholder="Email" />
 
-  <div id="password-wrapper">
+  <div class="input-wrapper">
+    <input id="email" type="email" placeholder="Email" />
+    <i class="user-icon">👤</i>
+  </div>
+
+  <div class="input-wrapper">
     <input id="password" type="password" placeholder="Senha" />
-    <button id="togglePassword" type="button">Mostrar</button>
+    <i id="togglePassword">👁️</i>
   </div>
 
   <button id="btnLogin">Entrar</button>
   <p id="login-msg"></p>
 </div>
 
-<!-- ============================================== -->
-<!--                ÁREA DO APLICATIVO              -->
-<!-- ============================================== -->
+<!-- APP -->
 <div id="app-area" style="display:none;">
   <div class="card">
     <h1>Conversor de Aviso de Pagamento - PDF > Excel</h1>
@@ -165,9 +168,7 @@
   </div>
 </div>
 
-<!-- ============================================== -->
-<!--      SCRIPT FIREBASE (FINAL DA PÁGINA)         -->
-<!-- ============================================== -->
+<!-- FIREBASE AUTH -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -232,17 +233,13 @@ const togglePassword = document.getElementById("togglePassword");
 togglePassword.addEventListener("click", () => {
   if(passInput.type === "password"){
     passInput.type = "text";
-    togglePassword.textContent = "Ocultar";
   } else {
     passInput.type = "password";
-    togglePassword.textContent = "Mostrar";
   }
 });
 </script>
 
-<!-- ============================================== -->
-<!--      SCRIPT DO APLICATIVO (INALTERADO)         -->
-<!-- ============================================== -->
+<!-- APP SCRIPT -->
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
