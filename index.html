@@ -19,13 +19,17 @@
  }
 #login-area input {
   width: 100%;
-  padding: 14px;         /* igual ao botão */
+  padding: 12px;
   margin-bottom: 12px;
   font-size: 16px;
-  border: none;          /* igual ao botão */
-  border-radius: 8px;    /* igual ao botão */
-  background: #f1f5f9;   /* cor suave para parecer componente */
-  box-shadow: 0 0 0 1px #d1d5db inset; /* leve contorno */
+  border: none;              /* Sem borda – igual ao botão */
+  border-radius: 8px;        /* Mesma curvatura */
+  background: #f1f5f9;       /* Fundo suave */
+  outline: none;             /* Remove highlight azul */
+}
+
+#login-area input:focus {
+  outline: 2px solid #0ea5a4; /* Igual ao hover do botão */
  }
  #login-area button {
    width: 100%;
