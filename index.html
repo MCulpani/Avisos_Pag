@@ -3,64 +3,223 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Conversor de Aviso de Pagamento - PDF > Excel</title>
+<title>Conversor Aviso de Pagamento</title>
 
 <style>
- body { font-family: Arial, sans-serif; background:#f1f5f9; margin:0; padding:24px; }
+    body {
+        margin: 0;
+        padding: 24px;
+        font-family: "Inter", Arial, sans-serif;
+        background: #f1f5f9;
+    }
 
- /* Área de login */
- #login-area {
-   max-width: 400px;
-   margin: 40px auto;
-   padding: 25px;
-   background: #fff;
-   border-radius: 12px;
-   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
- }
- #login-area input {
-   width: 100%;
-   padding: 12px;
-   margin-bottom: 12px;
-   font-size: 16px;
-   border: 1px solid #ccc;
-   border-radius: 6px;
- }
- #login-area button {
-   width: 100%;
-   padding: 12px;
-   font-size: 16px;
-   background: #0ea5a4;
-   color: white;
-   border: none;
-   border-radius: 8px;
-   cursor: pointer;
-   margin-top: 8px;
- }
- #login-msg { color: red; font-size: 14px; }
+    /* ===================== LOGIN ===================== */
+    #login-area {
+        display: none;
+    }
 
- /* App */
- .card {
-   background:#fff; max-width:1000px; margin:auto; padding:24px; border-radius:12px;
-   box-shadow:0 4px 12px rgba(0,0,0,0.08);
- }
- button { padding:10px 16px; border:0; border-radius:8px; background:#0ea5a4; color:white; cursor:pointer; }
- #preview table { width:100%; border-collapse:collapse; margin-top:18px; }
- #preview th,#preview td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
- #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:18px; display:none; }
- #progressBar{ height:100%; width:0%; background:#0ea5a4; border-radius:6px; transition:width .25s; }
- #dashboardBox{ margin-top:18px; padding:16px; background:#fff3cd; border:2px solid #ffca2c; border-radius:8px; font-size:20px; font-weight:bold; color:#8a6d3b; }
+    .login-card {
+        width: 100%;
+        max-width: 380px;
+        margin: 60px auto;
+        padding: 30px;
+        background: #ffffff;
+        border-radius: 14px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+        text-align: center;
+    }
 
- #btnLogout {
-   margin-top:20px;
-   background:#ff5252 !important;
- }
+    .login-card h2 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: bold;
+        color: #0f172a;
+    }
+
+    .login-sub {
+        margin-top: 4px;
+        color: #64748b;
+        font-size: 14px;
+    }
+
+    .input-group {
+        text-align: left;
+        margin-top: 18px;
+    }
+
+    .input-group label {
+        font-size: 14px;
+        color: #334155;
+    }
+
+    .input-group input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #cbd5e1;
+        border-radius: 8px;
+        font-size: 15px;
+        margin-top: 4px;
+    }
+
+    .password-wrapper {
+        position: relative;
+    }
+
+    .toggle-pass {
+        position: absolute;
+        right: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        font-size: 18px;
+        opacity: 0.6;
+    }
+
+    .toggle-pass:hover {
+        opacity: 1;
+    }
+
+    .login-btn {
+        margin-top: 22px;
+        width: 100%;
+        background: #0ea5a4 !important;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 17px;
+        color: white;
+        cursor: pointer;
+        border: none;
+    }
+
+    .login-btn:hover {
+        background: #0c7c7b !important;
+    }
+
+    .login-error {
+        margin-top: 12px;
+        color: #e11d48;
+        font-size: 14px;
+    }
+
+    /* ===================== APP ===================== */
+    #app-area {
+        display: none;
+    }
+
+    .card {
+        background: #fff;
+        max-width: 1100px;
+        margin: auto;
+        padding: 24px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+        margin-top: 0;
+        font-size: 26px;
+        color: #0f172a;
+    }
+
+    /* ===================== BARRA SUPERIOR ===================== */
+    .top-actions {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+
+    .right-actions {
+        display: flex;
+        gap: 10px;
+    }
+
+    /* Estilo geral dos botões */
+    button {
+        padding: 10px 16px;
+        border: 0;
+        border-radius: 8px;
+        background: #0ea5a4;
+        color: white;
+        cursor: pointer;
+        font-size: 15px;
+    }
+
+    button:hover {
+        opacity: .9;
+    }
+
+    /* Botão Baixar Excel */
+    #downloadBtn {
+        background: #0ea5a4;
+    }
+
+    /* Botão Escolher arquivos */
+    #files::-webkit-file-upload-button {
+        background: #d1d5db !important;
+        color: #111827;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 15px;
+    }
+
+    /* Botão sair */
+    #btnLogout {
+        background: #ef4444 !important;
+    }
+
+    #btnLogout:hover {
+        background: #dc2626 !important;
+    }
+
+    /* ===================== PREVIEW ===================== */
+    #preview table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 18px;
+    }
+
+    #preview th, #preview td {
+        border-bottom: 1px solid #e2e8f0;
+        padding: 6px 8px;
+        font-size: 13px;
+    }
+
+    /* ===================== PROGRESSO ===================== */
+    #progressContainer {
+        width: 100%;
+        background: #e2e8f0;
+        height: 12px;
+        border-radius: 6px;
+        margin-top: 18px;
+        display: none;
+    }
+
+    #progressBar {
+        height: 100%;
+        width: 0%;
+        background: #0ea5a4;
+        border-radius: 6px;
+        transition: width .25s;
+    }
+
+    /* ===================== DASHBOARD ===================== */
+    #dashboardBox {
+        margin-top: 18px;
+        padding: 16px;
+        background: #fff3cd;
+        border: 2px solid #ffca2c;
+        border-radius: 8px;
+        font-size: 20px;
+        font-weight: bold;
+        color: #8a6d3b;
+    }
 </style>
 
-<!-- Firebase + Lógica de Login -->
+<!-- Firebase -->
 <script type="module">
-/* ---------------------------------------------------- */
-/* 1. IMPORTAÇÕES Firebase (não altere)                  */
-/* ---------------------------------------------------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
   getAuth,
@@ -69,9 +228,9 @@ import {
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-/* ---------------------------------------------------- */
-/* 2. CONFIGURAÇÃO DO FIREBASE (EDITE AQUI!)            */
-/* ---------------------------------------------------- */
+/* -----------------------------------------------------
+   🔥 CONFIG DO FIREBASE → COLE A SUA AQUI
+----------------------------------------------------- */
 const firebaseConfig = {
   apiKey: "AIzaSyC_FD33WikHRUVCd2JtH_ok3WF1YtfAFhU",
   authDomain: "conversor-de-avisos.firebaseapp.com",
@@ -84,26 +243,20 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
-/* ---------------------------------------------------- */
-/* 3. CONTROLE DE ACESSO (LOGIN / LOGOUT / PROTEÇÃO)    */
-/* ---------------------------------------------------- */
-
+/* Elementos */
 const loginBox = document.getElementById("login-area");
 const appBox   = document.getElementById("app-area");
-const msgLogin = document.getElementById("login-msg");
 
 const emailInput = document.getElementById("email");
 const passInput  = document.getElementById("password");
+const msgLogin   = document.getElementById("login-msg");
 const btnLogin   = document.getElementById("btnLogin");
 const btnLogout  = document.getElementById("btnLogout");
 
 /* LOGIN */
 btnLogin.addEventListener("click", async () => {
-  const email = emailInput.value.trim();
-  const pass  = passInput.value;
-
   try {
-    await signInWithEmailAndPassword(auth, email, pass);
+    await signInWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value);
     msgLogin.textContent = "";
   } catch (err) {
     msgLogin.textContent = "Erro: " + err.message;
@@ -115,7 +268,7 @@ btnLogout.addEventListener("click", async () => {
   await signOut(auth);
 });
 
-/* PROTEÇÃO DO APP */
+/* PROTEÇÃO */
 onAuthStateChanged(auth, (user) => {
   if (user) {
     loginBox.style.display = "none";
@@ -127,34 +280,73 @@ onAuthStateChanged(auth, (user) => {
 });
 </script>
 
+<!-- Mostrar / Ocultar senha -->
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const input = document.getElementById("password");
+  const toggle = document.getElementById("togglePass");
+
+  toggle.addEventListener("click", () => {
+    if (input.type === "password") {
+      input.type = "text";
+      toggle.textContent = "🙈";
+    } else {
+      input.type = "password";
+      toggle.textContent = "👁";
+    }
+  });
+});
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </head>
 <body>
 
-<!-- ============================================== -->
-<!--                ÁREA DE LOGIN                   -->
-<!-- ============================================== -->
-<div id="login-area" style="display:none;">
-  <h2>Acessar</h2>
-  <input id="email" type="email" placeholder="Email" />
-  <input id="password" type="password" placeholder="Senha" />
-  <button id="btnLogin">Entrar</button>
-  <p id="login-msg"></p>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="login-area">
+  <div class="login-card">
+    <h2>Bem-vindo</h2>
+    <p class="login-sub">Faça login para acessar o sistema</p>
+
+    <div class="input-group">
+      <label>Email</label>
+      <input id="email" type="email" placeholder="Seu email">
+    </div>
+
+    <div class="input-group">
+      <label>Senha</label>
+      <div class="password-wrapper">
+        <input id="password" type="password" placeholder="Sua senha">
+        <span id="togglePass" class="toggle-pass">👁</span>
+      </div>
+    </div>
+
+    <button id="btnLogin" class="login-btn">Entrar</button>
+    <p id="login-msg" class="login-error"></p>
+  </div>
 </div>
 
-<!-- ============================================== -->
-<!--                ÁREA DO APLICATIVO              -->
-<!-- ============================================== -->
-<div id="app-area" style="display:none;">
+
+<!-- ===================== APP ===================== -->
+<div id="app-area">
 
 <div class="card">
-  <h1>Conversor de Aviso de Pagamento - PDF > Excel</h1>
+
+  <h1>Conversor de Aviso de Pagamento • PDF → Excel</h1>
+
+  <div class="top-actions">
+      <button id="processBtn">Compilar e Transformar</button>
+
+      <div class="right-actions">
+          <button id="downloadBtn" disabled>Baixar Excel</button>
+          <button id="btnLogout">Sair da conta</button>
+      </div>
+  </div>
 
   <input id="files" type="file" accept="application/pdf" multiple />
-  <br><br>
-  <button id="processBtn">Compilar e Transformar</button>
-  <button id="downloadBtn" disabled>Baixar Excel</button>
 
   <div id="dashboardBox">Total em Avisos: R$ 0,00</div>
 
@@ -162,14 +354,14 @@ onAuthStateChanged(auth, (user) => {
 
   <div id="preview"></div>
 
-  <button id="btnLogout">Sair da conta</button>
 </div>
 
-</div><!-- fim app-area -->
+</div> <!-- /app-area -->
 
-<!-- ============================================== -->
-<!--      SEU SCRIPT ORIGINAL (sem alterar nada)    -->
-<!-- ============================================== -->
+
+
+
+<!-- ===================== LÓGICA ORIGINAL INALTERADA ===================== -->
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 
@@ -266,13 +458,18 @@ function updateDashboard(rows){
 }
 
 function renderPreview(rows){
-  if(!rows.length){ previewEl.innerHTML = "<p>Nenhum dado encontrado.</p>"; return; }
+  if(!rows.length){
+    previewEl.innerHTML = "<p>Nenhum dado encontrado.</p>";
+    return;
+  }
 
   const cols = Object.keys(rows[0]);
   let html = "<table><thead><tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr></thead><tbody>";
+
   rows.slice(0,30).forEach(r =>{
     html += "<tr>" + cols.map(c => `<td>${r[c] ?? ""}</td>`).join("") + "</tr>";
   });
+
   html += "</tbody></table>";
   previewEl.innerHTML = html;
 }
@@ -286,7 +483,10 @@ function buildExcel(rows){
 
 processBtn.addEventListener("click", async () =>{
   const files = [...filesInput.files];
-  if(!files.length){ alert("Selecione PDFs."); return; }
+  if(!files.length){ 
+    alert("Selecione PDFs.");
+    return;
+  }
 
   processBtn.disabled = true;
   downloadBtn.disabled = true;
@@ -296,7 +496,10 @@ processBtn.addEventListener("click", async () =>{
   renderPreview(compiled);
   updateDashboard(compiled);
 
-  if(compiled.length){ workbookBinary = buildExcel(compiled); downloadBtn.disabled = false; }
+  if(compiled.length){
+    workbookBinary = buildExcel(compiled);
+    downloadBtn.disabled = false;
+  }
 
   processBtn.disabled = false;
 });
