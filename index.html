@@ -1,123 +1,582 @@
-<!-- =============================================== -->
-<!-- ARQUIVO: index_opcao2.html                      -->
-<!-- DEMONSTRAÇÃO DA OPÇÃO 2 — SPA (1 página só)     -->
-<!-- =============================================== -->
-
 <!doctype html>
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Conversor – SPA (Opção 2)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Conversor de Aviso de Pagamento — SPA (Conversor + Histórico)</title>
+
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-    body {
-        font-family: Arial, sans-serif;
-        background: #f4f6f8;
-        margin: 0;
-        padding: 40px;
-        color: #333;
-    }
+  :root{
+    --primary:#0ea5a4;
+    --primary-2:#14b8a6;
+    --muted:#64748b;
+    --card-bg:#ffffff;
+    --bg:#f0f2f5;
+  }
+  body{
+    margin:0; font-family:'Inter', Arial, sans-serif; background:var(--bg); color:#0f172a;
+  }
+  header{
+    background:linear-gradient(90deg,var(--primary),var(--primary-2));
+    color:white; padding:18px 22px; display:flex; align-items:center; gap:18px;
+    justify-content:space-between;
+  }
+  header .brand{ font-weight:700; font-size:18px; }
+  header .right { display:flex; gap:10px; align-items:center; }
+  header button { background:rgba(255,255,255,0.12); color:white; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; }
+  .container{ max-width:1100px; margin:30px auto; padding:0 18px; }
 
-    h1 {
-        font-size: 26px;
-    }
+  .tabs{ display:flex; gap:12px; margin-bottom:18px; }
+  .tab{
+    background:var(--card-bg); padding:10px 14px; border-radius:10px; cursor:pointer; box-shadow:0 3px 10px rgba(2,6,23,0.06);
+  }
+  .tab.active{ outline:3px solid rgba(14,165,164,0.12); transform:translateY(-2px); }
 
-    .nav {
-        display: flex;
-        gap: 15px;
-        margin-bottom: 25px;
-    }
+  .panel{
+    background:var(--card-bg); padding:22px; border-radius:12px; box-shadow:0 6px 24px rgba(2,6,23,0.06);
+  }
 
-    .nav button {
-        padding: 10px 18px;
-        border-radius: 8px;
-        cursor: pointer;
-        border: none;
-        font-size: 15px;
-        background: #475569;
-        color: white;
-    }
+  /* layout conversor */
+  .row{ display:flex; gap:12px; align-items:center; }
+  .col{ flex:1; }
+  input[type="file"]{ padding:10px; border-radius:8px; }
+  .app-btn{ padding:10px 16px; border:0; border-radius:10px; background:var(--primary); color:white; cursor:pointer; font-weight:600; }
+  .app-btn.ghost{ background:#e6eef0; color:#0f172a; }
 
-    .nav button.active {
-        background: #1e40af;
-    }
+  #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:12px; display:none; }
+  #progressBar{ height:100%; width:0%; background:var(--primary); border-radius:6px; transition:width .25s; }
 
-    .card {
-        background: #fff;
-        padding: 25px;
-        border-radius: 12px;
-        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-        display: none;
-    }
+  #preview table { width:100%; border-collapse:collapse; margin-top:18px; font-size:13px; }
+  #preview th,#preview td { border-bottom:1px solid #e6eef2; padding:8px 10px; text-align:left; }
 
-    .card.active {
-        display: block;
-    }
+  .dashboard{ margin-top:12px; padding:12px; border-radius:8px; background:#fff8e6; border:1px solid #ffebc2; font-weight:600; color:#7a5b13; }
 
-    .fake-input {
-        width: 100%;
-        padding: 12px;
-        margin-top: 12px;
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        font-size: 15px;
-    }
+  /* histórico */
+  .list { margin-top:14px; }
+  .item { display:flex; gap:12px; align-items:center; padding:12px; border-radius:10px; background:#fbfcfe; border:1px solid #eef2f6; margin-bottom:8px; }
+  .item .meta{ flex:1; }
+  .small{ font-size:13px; color:var(--muted); }
 
-    button.action {
-        margin-top: 12px;
-        background: #2563eb;
-        color: white;
-        padding: 12px 20px;
-        border: none;
-        border-radius: 8px;
-        font-size: 16px;
-        cursor: pointer;
-    }
+  .notice{ margin-top:10px; font-size:14px; color:#065f46; background:#ecfdf5; padding:8px 10px; border-radius:8px; border:1px solid #bbf7d0;}
+  .danger{ background:#fff2f2; color:#7a1f1f; border:1px solid #f4c7c7; padding:8px 10px; border-radius:8px; }
 
-    button.action:hover {
-        background: #1e4ec7;
-    }
+  footer{ text-align:center; margin:30px 0; color:var(--muted); font-size:13px; }
 </style>
+
+<!-- libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
 </head>
 <body>
 
-<h1>Opção 2 — SPA (Single Page Application)</h1>
+<header>
+  <div class="brand">Conversor de Avisos — PDF → Excel (SPA)</div>
+  <div class="right">
+    <div id="userEmail" class="small"></div>
+    <button id="btnLogout" style="display:none;">Sair</button>
+  </div>
+</header>
 
-<div class="nav">
-    <button class="active" onclick="showTab('converter')">Conversor</button>
-    <button onclick="showTab('historico')">Histórico</button>
+<div class="container">
+  <div class="tabs">
+    <div id="tabConverter" class="tab active" onclick="showTab('converter')">📄 Conversor</div>
+    <div id="tabHistory" class="tab" onclick="showTab('history')">📁 Histórico</div>
+  </div>
+
+  <!-- CONVERSOR -->
+  <div id="converter" class="panel">
+    <!-- login box (mostra só se não logado) -->
+    <div id="loginBox" style="max-width:420px; margin:0 auto 18px auto;">
+      <h2 style="margin:0 0 12px 0;">Entrar na Plataforma</h2>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input id="email" type="email" placeholder="Email" style="flex:1; padding:10px; border-radius:8px; border:1px solid #d1d5db;">
+        <input id="password" type="password" placeholder="Senha" style="flex:1; padding:10px; border-radius:8px; border:1px solid #d1d5db;">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="btnLogin" class="app-btn">Entrar</button>
+        <button id="btnCreate" class="app-btn ghost">Criar conta</button>
+      </div>
+      <p id="loginMsg" class="small" style="margin-top:8px;color:#ef4444;"></p>
+    </div>
+
+    <!-- app area (aparece só se logado) -->
+    <div id="appArea" style="display:none;">
+      <h2>Enviar PDF(s)</h2>
+
+      <div style="margin-top:10px;" class="row">
+        <input id="files" type="file" accept="application/pdf" multiple />
+        <div style="margin-left:auto;">
+          <button id="processBtn" class="app-btn">Compilar e Transformar</button>
+          <button id="downloadBtn" class="app-btn" disabled>Baixar & Salvar no Histórico</button>
+        </div>
+      </div>
+
+      <div id="progressContainer"><div id="progressBar"></div></div>
+
+      <div class="dashboard" id="dashboardBox">Total em Avisos: R$ 0,00</div>
+
+      <div id="preview"></div>
+    </div>
+
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div id="history" class="panel" style="display:none;">
+    <h2>Histórico de compilados</h2>
+    <p class="small">Aqui são listados os arquivos gerados por você (usuário logado).</p>
+
+    <div id="historyList" class="list">
+      <div class="small">Carregando histórico...</div>
+    </div>
+
+    <div id="historyNotice" style="margin-top:12px;"></div>
+  </div>
+
+  <footer>Gerado com ❤️ — versão SPA (Conversor + Histórico)</footer>
 </div>
 
-<!-- Aba Conversor -->
-<div id="converter" class="card active">
-    <h2>Conversor PDF → Excel</h2>
+<!-- FIREBASE (modular) -->
+<script type="module">
+  // Firebase imports (modular)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getStorage,
+    ref as storageRef,
+    uploadBytes,
+    getDownloadURL
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    query,
+    where,
+    getDocs,
+    serverTimestamp,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    <input type="file" multiple class="fake-input">
+  // === SUA CONFIGURAÇÃO DO FIREBASE (copiada do que você enviou) ===
+  const firebaseConfig = {
+    apiKey: "AIzaSyC_FD33WikHRUVCd2JtH_ok3WF1YtfAFhU",
+    authDomain: "conversor-de-avisos.firebaseapp.com",
+    projectId: "conversor-de-avisos",
+    storageBucket: "conversor-de-avisos.firebasestorage.app",
+    messagingSenderId: "1099286231450",
+    appId: "1:1099286231450:web:94e0b02dec2ef6b0d26223"
+  };
 
-    <button class="action">Compilar e Transformar</button>
-</div>
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
 
-<!-- Aba Histórico -->
-<div id="historico" class="card">
-    <h2>Histórico de Processamentos</h2>
+  // UI elements
+  const loginBox = document.getElementById('loginBox');
+  const appArea = document.getElementById('appArea');
+  const emailInput = document.getElementById('email');
+  const passInput = document.getElementById('password');
+  const btnLogin = document.getElementById('btnLogin');
+  const btnCreate = document.getElementById('btnCreate');
+  const loginMsg = document.getElementById('loginMsg');
+  const btnLogout = document.getElementById('btnLogout');
+  const userEmail = document.getElementById('userEmail');
 
-    <ul>
-        <li>📄 2025-02-10 – arquivo_compilado_01.xlsx</li>
-        <li>📄 2025-02-09 – arquivo_compilado_02.xlsx</li>
-        <li>📄 2025-02-08 – arquivo_compilado_03.xlsx</li>
-    </ul>
-</div>
+  const filesInput = document.getElementById('files');
+  const processBtn = document.getElementById('processBtn');
+  const downloadBtn = document.getElementById('downloadBtn');
+  const previewEl = document.getElementById('preview');
+  const progressContainer = document.getElementById('progressContainer');
+  const progressBar = document.getElementById('progressBar');
+  const dashboardBox = document.getElementById('dashboardBox');
 
-<script>
-function showTab(tab) {
-    document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+  const historyList = document.getElementById('historyList');
+  const historyNotice = document.getElementById('historyNotice');
 
-    document.querySelector(`[onclick="showTab('${tab}')"]`).classList.add('active');
-    document.getElementById(tab).classList.add('active');
-}
+  // PDF.js worker
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+
+  // Keep compiled rows and workbook
+  let compiled = [];
+  let workbookBinary = null;
+
+  // ------------------ Auth handlers ------------------
+  btnLogin.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    const pass = passInput.value;
+    loginMsg.textContent = "";
+    if(!email || !pass){ loginMsg.textContent = "Preencha email e senha."; return; }
+    try{
+      await signInWithEmailAndPassword(auth, email, pass);
+    }catch(err){
+      loginMsg.textContent = err.message;
+    }
+  });
+
+  btnCreate.addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    const pass = passInput.value;
+    loginMsg.textContent = "";
+    if(!email || !pass){ loginMsg.textContent = "Preencha email e senha."; return; }
+    try{
+      await createUserWithEmailAndPassword(auth, email, pass);
+    }catch(err){
+      loginMsg.textContent = err.message;
+    }
+  });
+
+  btnLogout.addEventListener('click', async () => {
+    await signOut(auth);
+  });
+
+  onAuthStateChanged(auth, user => {
+    if(user){
+      loginBox.style.display = 'none';
+      appArea.style.display = 'block';
+      btnLogout.style.display = 'inline-block';
+      userEmail.textContent = user.email || user.uid;
+      // load history for this user
+      loadHistoryForUser(user.uid);
+    } else {
+      loginBox.style.display = 'block';
+      appArea.style.display = 'none';
+      btnLogout.style.display = 'none';
+      userEmail.textContent = '';
+      historyList.innerHTML = '<div class="small">Efetue login para ver histórico.</div>';
+    }
+  });
+
+  // ------------------ PDF processing (adaptado do seu código) ------------------
+  const LOCATIONS = [
+    "JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG",
+    "ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"
+  ];
+
+  function detectLocation(txt){
+    let clean = txt.replace(/\s+/g, ' ').toUpperCase();
+    for(const loc of LOCATIONS){
+      if(clean.includes(loc)) return loc;
+    }
+    return "NÃO IDENTIFICADO";
+  }
+
+  const rowRegex =
+    /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
+
+  function parseCurrency(v){
+    if(!v) return null;
+    return parseFloat(v.replace(/\./g,"").replace(",","."));
+  }
+
+  function parseDateBR(d){
+    const m = d.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+    return m ? `${m[1]}/${m[2]}/${m[3]}` : "";
+  }
+
+  function getCodigoFilial(local){
+    switch(local){
+      case "JOINVILLE - SC": return "500001102";
+      case "CASTRO - PR": return "500001855";
+      case "CONTAGEM - MG": return "500001459";
+      case "ESCADA - PE": return "500001122";
+      case "RIO CLARO - SP": return "500001131";
+      case "SIMOES FILHO - BA": return "500001405";
+      default: return "";
+    }
+  }
+
+  function extractRowsFromText(txt, local, documento, fileName){
+    let rows = [], m;
+    while((m = rowRegex.exec(txt)) !== null){
+      rows.push({
+        "Local": local,
+        "Código filial": getCodigoFilial(local),
+        "Documento": documento,
+        "Nº doc SAP": m[1],
+        "Doc Referência": m[2],
+        "Data": parseDateBR(m[3]),
+        "Desconto": parseCurrency(m[4]),
+        "Montante bruto": parseCurrency(m[5]),
+        "Nome da Origem": fileName
+      });
+    }
+    return rows;
+  }
+
+  async function extractTextFromPdfFile(file){
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    let text = "";
+    for(let i = 1; i <= pdf.numPages; i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(x => x.str).join(" ") + "\n";
+    }
+    return text;
+  }
+
+  async function processFiles(files){
+    compiled = [];
+    let processed = 0;
+    progressContainer.style.display = 'block';
+    progressBar.style.width = '0%';
+
+    for(const f of files){
+      const txt = await extractTextFromPdfFile(f);
+      const local = detectLocation(txt);
+      const docMatch = txt.match(/Documento\s+(\d{6,})/);
+      const documento = docMatch ? docMatch[1] : "";
+      const rows = extractRowsFromText(txt, local, documento, f.name);
+      compiled.push(...rows);
+
+      processed++;
+      progressBar.style.width = ((processed / files.length) * 100) + "%";
+    }
+
+    progressContainer.style.display = 'none';
+    renderPreview(compiled);
+    updateDashboard(compiled);
+
+    if(compiled.length){
+      workbookBinary = buildExcel(compiled);
+      downloadBtn.disabled = false;
+    } else {
+      workbookBinary = null;
+      downloadBtn.disabled = true;
+    }
+  }
+
+  function updateDashboard(rows){
+    const total = rows.reduce((sum, r) => sum + (r["Montante bruto"] || 0), 0);
+    dashboardBox.textContent = "Total em Avisos: " + total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+  }
+
+  function renderPreview(rows){
+    if(!rows.length){
+      previewEl.innerHTML = "<p>Nenhum dado encontrado.</p>";
+      return;
+    }
+    const cols = Object.keys(rows[0]);
+    let html = "<table><thead><tr>" + cols.map(c => `<th>${c}</th>`).join("") + "</tr></thead><tbody>";
+    rows.slice(0,40).forEach(r => {
+      html += "<tr>" + cols.map(c => `<td>${r[c] ?? ""}</td>`).join("") + "</tr>";
+    });
+    html += "</tbody></table>";
+    previewEl.innerHTML = html;
+  }
+
+  function buildExcel(rows){
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dados");
+    return wb;
+  }
+
+  processBtn.addEventListener('click', async () => {
+    const files = [...filesInput.files];
+    if(!files.length){ alert("Selecione PDFs."); return; }
+    processBtn.disabled = true;
+    downloadBtn.disabled = true;
+    await processFiles(files);
+    processBtn.disabled = false;
+  });
+
+  // ------------------ HASH (SHA-256) ------------------
+  async function sha256HexOfRows(rows){
+    // deterministic JSON: stable key order
+    const normalized = rows.map(r => {
+      const keys = Object.keys(r).sort();
+      const obj = {};
+      for(const k of keys) obj[k] = r[k];
+      return obj;
+    });
+    const s = JSON.stringify(normalized);
+    const enc = new TextEncoder();
+    const buf = enc.encode(s);
+    const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+    const hashArray = Array.from(new Uint8Array(hashBuf));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2,'0')).join('');
+    return hashHex;
+  }
+
+  // ------------------ SALVAR NO FIREBASE (com verificação de duplicado) ------------------
+  async function existsHashForUser(hash, uid){
+    const uploadsColl = collection(db, 'uploads');
+    const q = query(uploadsColl, where('hash','==',hash), where('userId','==',uid));
+    const snap = await getDocs(q);
+    return !snap.empty;
+  }
+
+  async function saveWorkbookToStorageAndRecord(wb, meta){
+    // wb: workbook object from XLSX.utils.book_new()
+    // meta: { userId, fileName, hash, recordCount }
+    // 1) generate binary array
+    const ab = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+    const blob = new Blob([ab], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    // storage path
+    const filePath = `users/${meta.userId}/compilados/${meta.fileName}`;
+    const ref = storageRef(storage, filePath);
+    // upload
+    await uploadBytes(ref, blob);
+    const url = await getDownloadURL(ref);
+    // save record in Firestore
+    const uploadsColl = collection(db, 'uploads');
+    await addDoc(uploadsColl, {
+      userId: meta.userId,
+      fileName: meta.fileName,
+      downloadURL: url,
+      recordCount: meta.recordCount,
+      sizeBytes: blob.size,
+      hash: meta.hash,
+      createdAt: serverTimestamp()
+    });
+    return url;
+  }
+
+  // When user clicks download -> compute hash, check duplicate, save if new, then trigger download
+  downloadBtn.addEventListener('click', async () => {
+    if(!workbookBinary){ alert("Nenhum Excel gerado."); return; }
+    const user = auth.currentUser;
+    if(!user){ alert("Efetue login para salvar no histórico."); return; }
+
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = "Processando...";
+
+    try{
+      const rows = compiled;
+      const hash = await sha256HexOfRows(rows);
+      const uid = user.uid;
+
+      const already = await existsHashForUser(hash, uid);
+      const filename = `compilado_${new Date().toISOString().slice(0,10)}_${hash.slice(0,8)}.xlsx`;
+
+      if(already){
+        // arquivo duplicado: apenas gerar download local (sem salvar)
+        historyNotice.textContent = '';
+        historyNotice.className = '';
+        alert("⚠️ Este processamento já existe no histórico. O arquivo não será salvo novamente.");
+        // still provide local download copy
+        const ab = XLSX.write(workbookBinary, {bookType:'xlsx', type:'array'});
+        const blob = new Blob([ab], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } else {
+        // save to storage and create record
+        const meta = { userId: uid, fileName: filename, hash, recordCount: compiled.length };
+        const url = await saveWorkbookToStorageAndRecord(workbookBinary, meta);
+        historyNotice.textContent = '✅ Salvamento efetuado no histórico.';
+        historyNotice.className = 'notice';
+        // trigger local download as well
+        const ab = XLSX.write(workbookBinary, {bookType:'xlsx', type:'array'});
+        const blob = new Blob([ab], {type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+        const urlLocal = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = urlLocal;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(urlLocal);
+
+        // refresh history list
+        await loadHistoryForUser(uid);
+      }
+    } catch(err){
+      console.error(err);
+      historyNotice.textContent = 'Erro ao salvar: ' + err.message;
+      historyNotice.className = 'danger';
+    } finally {
+      downloadBtn.disabled = false;
+      downloadBtn.textContent = 'Baixar & Salvar no Histórico';
+    }
+  });
+
+  // ------------------ LOAD HISTORY ------------------
+  async function loadHistoryForUser(uid){
+    try{
+      historyList.innerHTML = '<div class="small">Carregando histórico...</div>';
+      const uploadsColl = collection(db, 'uploads');
+      // order by createdAt desc is ideal, but createdAt uses serverTimestamp; Firestore queries with orderBy require index if also using where: for simplicity we'll fetch all for user and sort client-side
+      const q = query(uploadsColl, where('userId','==',uid));
+      const snap = await getDocs(q);
+      const items = [];
+      snap.forEach(d => {
+        const data = d.data();
+        items.push({
+          id: d.id,
+          fileName: data.fileName,
+          downloadURL: data.downloadURL,
+          recordCount: data.recordCount,
+          sizeBytes: data.sizeBytes,
+          createdAt: data.createdAt ? data.createdAt.toDate() : null,
+          hash: data.hash
+        });
+      });
+      // sort by createdAt desc
+      items.sort((a,b) => {
+        if(!a.createdAt) return 1;
+        if(!b.createdAt) return -1;
+        return b.createdAt - a.createdAt;
+      });
+
+      if(!items.length){
+        historyList.innerHTML = '<div class="small">Nenhum processamento salvo ainda.</div>';
+        return;
+      }
+
+      historyList.innerHTML = '';
+      for(const it of items){
+        const el = document.createElement('div');
+        el.className = 'item';
+        const dateStr = it.createdAt ? it.createdAt.toLocaleString('pt-BR') : '—';
+        el.innerHTML = `
+          <div class="meta">
+            <div style="font-weight:600">${it.fileName}</div>
+            <div class="small">${dateStr} • ${it.recordCount ?? '—'} registros • ${ (it.sizeBytes ? (it.sizeBytes/1024).toFixed(1) + ' KB' : '—') }</div>
+            <div class="small">hash: ${it.hash ?? '—'}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <a class="app-btn" href="${it.downloadURL}" target="_blank" rel="noopener noreferrer">Baixar</a>
+          </div>
+        `;
+        historyList.appendChild(el);
+      }
+
+    } catch(err){
+      historyList.innerHTML = '<div class="small">Erro ao carregar histórico: ' + err.message + '</div>';
+    }
+  }
+
+  // ------------------ TABS ------------------
+  function showTab(id){
+    document.getElementById('converter').style.display = id === 'converter' ? 'block' : 'none';
+    document.getElementById('history').style.display = id === 'history' ? 'block' : 'none';
+    document.getElementById('tabConverter').classList.toggle('active', id === 'converter');
+    document.getElementById('tabHistory').classList.toggle('active', id === 'history');
+  }
+  window.showTab = showTab;
+
+  // Expose loadHistoryForUser for auth change reload
+  window.loadHistoryForUser = loadHistoryForUser;
+
 </script>
 
 </body>
