@@ -125,6 +125,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </head>
 <body>
 
@@ -168,6 +169,16 @@
     <div id="progressContainer"><div id="progressBar"></div></div>
 
     <div id="preview"></div>
+  </div>
+</div>
+
+<!-- HISTÓRICO -->
+<div id="history" class="panel" style="display:none;">
+  <h2>Histórico de Arquivos Gerados</h2>
+  <p class="small">Aqui são listados os arquivos Excel gerados por você.</p>
+
+  <div id="historyList" class="list">
+    <div class="small">Carregando histórico...</div>
   </div>
 </div>
 
@@ -225,6 +236,7 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     loginBox.style.display = "none";
     appBox.style.display = "block";
+    loadHistory();
   } else {
     loginBox.style.display = "block";
     appBox.style.display = "none";
@@ -412,6 +424,49 @@ downloadBtn.addEventListener("click", ()=>{
     "compilado_" + new Date().toISOString().slice(0,10) + ".xlsx"
   );
 });
+
+
+// HISTÓRICO - Funções para o histórico
+async function checkIfFileExists(fileName) {
+  const uploadsCollection = collection(firestore, "uploads");
+  const querySnapshot = await getDocs(query(uploadsCollection, where("fileName", "==", fileName)));
+  return !querySnapshot.empty;  // Retorna true se já existe no histórico
+}
+
+async function saveToHistory(fileName) {
+  const uploadsCollection = collection(firestore, "uploads");
+  await addDoc(uploadsCollection, {
+    fileName: fileName,
+    createdAt: new Date()
+  });
+}
+
+async function loadHistory() {
+  const uploadsCollection = collection(firestore, "uploads");
+  const querySnapshot = await getDocs(query(uploadsCollection, orderBy("createdAt", "desc")));
+  const historyList = document.getElementById("historyList");
+
+  historyList.innerHTML = "";  // Limpar antes de exibir
+
+  if (querySnapshot.empty) {
+    historyList.innerHTML = "<div class='small'>Nenhum arquivo carregado ainda.</div>";
+    return;
+  }
+
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    const historyItem = document.createElement("div");
+    historyItem.className = "item";
+    historyItem.innerHTML = `
+      <div class="meta">
+        <div style="font-weight:600">${data.fileName}</div>
+        <div class="small">${data.createdAt.toDate().toLocaleString()}</div>
+      </div>
+    `;
+    historyList.appendChild(historyItem);
+  });
+}
+
 </script>
 
 </body>
