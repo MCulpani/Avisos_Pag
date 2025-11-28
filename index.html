@@ -101,7 +101,7 @@
       <p id="loginMsg" class="small" style="margin-top:8px;color:#ef4444;"></p>
     </div>
 
-    <!-- app area (aparece só se logado) -->
+    <!-- app area (aparece só se não logado) -->
     <div id="appArea" style="display:none;">
       <h2>Enviar PDF(s)</h2>
 
@@ -184,6 +184,17 @@
   const btnLogout = document.getElementById("btnLogout");
   const userEmail = document.getElementById("userEmail");
 
+  const filesInput = document.getElementById("files");
+  const processBtn = document.getElementById("processBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
+  const progressBar = document.getElementById("progressBar");
+  const progressContainer = document.getElementById("progressContainer");
+  const dashboardBox = document.getElementById("dashboardBox");
+  const previewEl = document.getElementById("preview");
+  const historyList = document.getElementById("historyList");
+
+  let compiled = [];
+
   /* LOGIN */
   btnLogin.addEventListener("click", async () => {
     const email = emailInput.value.trim();
@@ -216,38 +227,16 @@
       userEmail.textContent = '';
     }
   });
-</script>
 
-<script>
-  // Função para verificar se o arquivo já existe no histórico
-  async function checkIfFileExists(fileName) {
-    const uploadsCollection = collection(firestore, "uploads");
-    const querySnapshot = await getDocs(query(uploadsCollection, where("fileName", "==", fileName)));
-    return !querySnapshot.empty;  // Retorna true se já existe no histórico
-  }
-
-  // Função para salvar no histórico do Firebase
-  async function saveToHistory(fileName) {
-    const uploadsCollection = collection(firestore, "uploads");
-    await addDoc(uploadsCollection, {
-      fileName: fileName,
-      createdAt: new Date()
-    });
-  }
-
-  // Função para exibir o histórico na página
+  /* HISTÓRICO */
   async function loadHistory() {
     const uploadsCollection = collection(firestore, "uploads");
     const querySnapshot = await getDocs(query(uploadsCollection, orderBy("createdAt", "desc")));
-    const historyList = document.getElementById("historyList");
-
-    historyList.innerHTML = "";  // Limpar antes de exibir
-
+    historyList.innerHTML = "";
     if (querySnapshot.empty) {
       historyList.innerHTML = "<div class='small'>Nenhum arquivo carregado ainda.</div>";
       return;
     }
-
     querySnapshot.forEach((doc) => {
       const data = doc.data();
       const historyItem = document.createElement("div");
@@ -262,43 +251,20 @@
     });
   }
 
-  // Função para processar os arquivos, incluindo a verificação de duplicação
   async function processFiles(files) {
-    compiled = [];
     let processed = 0;
     progressContainer.style.display = "block";
+    progressBar.style.width = "0%";
 
-    for (const f of files) {
-      const fileName = f.name;
-
-      // Verificar se o arquivo já está no histórico
-      const exists = await checkIfFileExists(fileName);
-      if (exists) {
-        console.log(`O arquivo ${fileName} já foi processado. Ignorando...`);
-        continue;  // Pula para o próximo arquivo
-      }
-
-      const txt = await extractText(f);
-      const local = detectLocation(txt);
-      const docMatch = txt.match(/Documento\s+(\d{6,})/);
-      const documento = docMatch ? docMatch[1] : "";
-
-      const rows = extractRows(txt, local, documento);
-      rows.forEach(r => r["Nome da Origem"] = fileName);
-      compiled.push(...rows);
-
-      // Salvar no histórico após o processamento
-      await saveToHistory(fileName);
-
+    for (const file of files) {
+      // Simula processamento do arquivo
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simula a espera do processamento
       processed++;
       progressBar.style.width = ((processed / files.length) * 100) + "%";
     }
 
-    // Atualizar o dashboard após o processamento
-    updateDashboard(compiled);
-    renderPreview(compiled);
-
     progressContainer.style.display = "none";
+    alert("Processamento concluído!");
     downloadBtn.disabled = false;
   }
 
@@ -311,23 +277,12 @@
 
     processBtn.disabled = true;
     downloadBtn.disabled = true;
-    progressBar.style.width = "0%";
-
     await processFiles(files);
-    renderPreview(compiled);
-    updateDashboard(compiled);
-
-    if (compiled.length) {
-      workbookBinary = buildExcel(compiled);
-      downloadBtn.disabled = false;
-    }
-
     processBtn.disabled = false;
   });
 
   downloadBtn.addEventListener("click", () => {
-    if (!workbookBinary) return;
-    XLSX.writeFile(workbookBinary, "compilado_" + new Date().toISOString().slice(0, 10) + ".xlsx");
+    alert("Baixar arquivo gerado (ainda não implementado).");
   });
 </script>
 
