@@ -121,55 +121,10 @@
   #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:18px; display:none; }
   #progressBar{ height:100%; width:0%; background:#0ea5a4; border-radius:6px; transition:width .25s; }
   #dashboardBox{ margin-top:18px; padding:16px; background:#fff3cd; border:2px solid #ffca2c; border-radius:8px; font-size:20px; font-weight:bold; color:#8a6d3b; }
-
-  /* Aba de Histórico */
-  .tabs {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-  }
-
-  .tab {
-    padding: 10px 15px;
-    background: #fff;
-    border-radius: 8px;
-    cursor: pointer;
-    font-weight: 600;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-  }
-
-  .tab.active {
-    background: #0ea5a4;
-    color: white;
-  }
-
-  #historyList {
-    margin-top: 20px;
-  }
-
-  .item {
-    padding: 10px;
-    background: #f9fafb;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-  }
-
-  .item .meta {
-    display: flex;
-    justify-content: space-between;
-    font-weight: 600;
-  }
-
-  .item .small {
-    color: #64748b;
-    font-size: 12px;
-  }
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
 </head>
 <body>
 
@@ -216,22 +171,6 @@
   </div>
 </div>
 
-<!-- ABA HISTÓRICO -->
-<div id="tabs">
-  <div id="tabConverter" class="tab active" onclick="showTab('converter')">📄 Conversor</div>
-  <div id="tabHistory" class="tab" onclick="showTab('history')">📁 Histórico</div>
-</div>
-
-<!-- HISTÓRICO -->
-<div id="history" class="panel" style="display:none;">
-  <h2>Histórico de Arquivos Gerados</h2>
-  <p class="small">Aqui são listados os arquivos Excel gerados por você.</p>
-
-  <div id="historyList" class="list">
-    <div class="small">Carregando histórico...</div>
-  </div>
-</div>
-
 <!-- FIREBASE AUTH -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -241,21 +180,6 @@ import {
   signInWithEmailAndPassword,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getStorage,
-  ref as storageRef,
-  uploadBytes,
-  getDownloadURL
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
-import {
-  getFirestore,
-  collection,
-  addDoc,
-  query,
-  where,
-  getDocs,
-  orderBy
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC_FD33WikHRUVCd2JtH_ok3WF1YtfAFhU",
@@ -268,8 +192,6 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const firestore = getFirestore(app);
-const storage = getStorage(app);
 
 const loginBox = document.getElementById("login-area");
 const appBox   = document.getElementById("app-area");
@@ -303,7 +225,6 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     loginBox.style.display = "none";
     appBox.style.display = "block";
-    loadHistory();
   } else {
     loginBox.style.display = "block";
     appBox.style.display = "none";
@@ -319,38 +240,6 @@ togglePassword.addEventListener("click", () => {
     passInput.type = "password";
   }
 });
-
-/* HISTÓRICO */
-async function loadHistory() {
-  const uploadsCollection = collection(firestore, "uploads");
-  const querySnapshot = await getDocs(query(uploadsCollection, orderBy("createdAt", "desc")));
-  historyList.innerHTML = "";
-  if (querySnapshot.empty) {
-    historyList.innerHTML = "<div class='small'>Nenhum arquivo carregado ainda.</div>";
-    return;
-  }
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    const historyItem = document.createElement("div");
-    historyItem.className = "item";
-    historyItem.innerHTML = `
-      <div class="meta">
-        <div style="font-weight:600">${data.fileName}</div>
-        <div class="small">${data.createdAt.toDate().toLocaleString()}</div>
-      </div>
-    `;
-    historyList.appendChild(historyItem);
-  });
-}
-
-/* TABS */
-function showTab(tab){
-  const tabs = ['converter', 'history'];
-  tabs.forEach(id => {
-    document.getElementById(id).style.display = id === tab ? 'block' : 'none';
-    document.getElementById(`tab${id.charAt(0).toUpperCase() + id.slice(1)}`).classList.toggle('active', id === tab);
-  });
-}
 </script>
 
 <!-- APP SCRIPT -->
@@ -365,7 +254,6 @@ const previewEl = document.getElementById("preview");
 const progressContainer = document.getElementById("progressContainer");
 const progressBar = document.getElementById("progressBar");
 const dashboardBox = document.getElementById("dashboardBox");
-const historyList = document.getElementById("historyList");
 
 let compiled = [];
 let workbookBinary = null;
