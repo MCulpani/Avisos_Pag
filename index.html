@@ -125,6 +125,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </head>
 <body>
 
@@ -235,6 +236,7 @@ onAuthStateChanged(auth, (user) => {
   if (user) {
     loginBox.style.display = "none";
     appBox.style.display = "block";
+    loadHistory();
   } else {
     loginBox.style.display = "block";
     appBox.style.display = "none";
@@ -250,6 +252,29 @@ togglePassword.addEventListener("click", () => {
     passInput.type = "password";
   }
 });
+
+/* HISTÓRICO */
+async function loadHistory() {
+  const uploadsCollection = collection(firestore, "uploads");
+  const querySnapshot = await getDocs(query(uploadsCollection, orderBy("createdAt", "desc")));
+  historyList.innerHTML = "";
+  if (querySnapshot.empty) {
+    historyList.innerHTML = "<div class='small'>Nenhum arquivo carregado ainda.</div>";
+    return;
+  }
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    const historyItem = document.createElement("div");
+    historyItem.className = "item";
+    historyItem.innerHTML = `
+      <div class="meta">
+        <div style="font-weight:600">${data.fileName}</div>
+        <div class="small">${data.createdAt.toDate().toLocaleString()}</div>
+      </div>
+    `;
+    historyList.appendChild(historyItem);
+  });
+}
 </script>
 
 <!-- APP SCRIPT -->
