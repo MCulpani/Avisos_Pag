@@ -1,309 +1,301 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Conversor PDF - Avisos de Pagamento</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Conversor de Aviso de Pagamento — SPA (Conversor + Histórico)</title>
+
+<!-- Google Font -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-    body {
-        margin: 0;
-        font-family: Inter, Arial, sans-serif;
-        background: #f5f5f5;
-    }
+  :root{
+    --primary:#0ea5a4;
+    --primary-2:#14b8a6;
+    --muted:#64748b;
+    --card-bg:#ffffff;
+    --bg:#f0f2f5;
+  }
+  body{
+    margin:0; font-family:'Inter', Arial, sans-serif; background:var(--bg); color:#0f172a;
+  }
+  header{
+    background:linear-gradient(90deg,var(--primary),var(--primary-2));
+    color:white; padding:18px 22px; display:flex; align-items:center; gap:18px;
+    justify-content:space-between;
+  }
+  header .brand{ font-weight:700; font-size:18px; }
+  header .right { display:flex; gap:10px; align-items:center; }
+  header button { background:rgba(255,255,255,0.12); color:white; border:0; padding:8px 12px; border-radius:10px; cursor:pointer; }
+  .container{ max-width:1100px; margin:30px auto; padding:0 18px; }
 
-    /* LOGIN */
-    #loginPage, #mainPage, #historyPage {
-        display: none;
-        padding: 20px;
-    }
+  .tabs{ display:flex; gap:12px; margin-bottom:18px; }
+  .tab{
+    background:var(--card-bg); padding:10px 14px; border-radius:10px; cursor:pointer; box-shadow:0 3px 10px rgba(2,6,23,0.06);
+  }
+  .tab.active{ outline:3px solid rgba(14,165,164,0.12); transform:translateY(-2px); }
 
-    .card {
-        max-width: 400px;
-        margin: 40px auto;
-        background: white;
-        padding: 30px;
-        border-radius: 14px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-    }
+  .panel{
+    background:var(--card-bg); padding:22px; border-radius:12px; box-shadow:0 6px 24px rgba(2,6,23,0.06);
+  }
 
-    input[type=text], input[type=password], input[type=date], input[type=file] {
-        width: 100%;
-        padding: 12px;
-        margin-bottom: 15px;
-        border: 1px solid #ccc;
-        border-radius: 8px;
-        font-size: 16px;
-    }
+  /* layout conversor */
+  .row{ display:flex; gap:12px; align-items:center; }
+  .col{ flex:1; }
+  input[type="file"]{ padding:10px; border-radius:8px; }
+  .app-btn{ padding:10px 16px; border:0; border-radius:10px; background:var(--primary); color:white; cursor:pointer; font-weight:600; }
+  .app-btn.ghost{ background:#e6eef0; color:#0f172a; }
 
-    button {
-        padding: 12px 20px;
-        border: none;
-        background: #2563eb;
-        color: white;
-        font-size: 16px;
-        border-radius: 8px;
-        cursor: pointer;
-    }
+  #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:12px; display:none; }
+  #progressBar{ height:100%; width:0%; background:var(--primary); border-radius:6px; transition:width .25s; }
 
-    button:hover { background: #1d4ed8; }
+  #preview table { width:100%; border-collapse:collapse; margin-top:18px; font-size:13px; }
+  #preview th,#preview td { border-bottom:1px solid #e6eef2; padding:8px 10px; text-align:left; }
 
-    .btn-gray { background: #6b7280; }
-    .btn-gray:hover { background: #4b5563; }
+  .dashboard{ margin-top:12px; padding:12px; border-radius:8px; background:#fff8e6; border:1px solid #ffebc2; font-weight:600; color:#7a5b13; }
 
-    .btn-red { background: #dc2626; }
-    .btn-red:hover { background: #b91c1c; }
+  /* histórico */
+  .list { margin-top:14px; }
+  .item { display:flex; gap:12px; align-items:center; padding:12px; border-radius:10px; background:#fbfcfe; border:1px solid #eef2f6; margin-bottom:8px; }
+  .item .meta{ flex:1; }
+  .small{ font-size:13px; color:var(--muted); }
 
-    nav {
-        background: #111827;
-        color: white;
-        padding: 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
+  .notice{ margin-top:10px; font-size:14px; color:#065f46; background:#ecfdf5; padding:8px 10px; border-radius:8px; border:1px solid #bbf7d0;}
+  .danger{ background:#fff2f2; color:#7a1f1f; border:1px solid #f4c7c7; padding:8px 10px; border-radius:8px; }
 
-    nav button { margin-left: 10px; }
-
-    table {
-        width: 100%;
-        background: white;
-        border-collapse: collapse;
-        margin-top: 20px;
-        border-radius: 10px;
-        overflow: hidden;
-    }
-
-    th, td {
-        border-bottom: 1px solid #e5e7eb;
-        padding: 14px;
-        text-align: left;
-    }
-
-    th {
-        background: #f3f4f6;
-    }
-
-    #dashboard {
-        margin-top: 20px;
-        padding: 20px;
-        background: white;
-        border-radius: 10px;
-        font-size: 20px;
-        font-weight: bold;
-        color: #111827;
-        box-shadow: 0 3px 15px rgba(0,0,0,0.07);
-    }
+  footer{ text-align:center; margin:30px 0; color:var(--muted); font-size:13px; }
 </style>
+
+<!-- libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </head>
 <body>
 
-<!-- LOGIN PAGE -->
-<div id="loginPage">
-    <div class="card">
-        <h2>Login</h2>
-        <input id="email" type="text" placeholder="Email">
-        <input id="password" type="password" placeholder="Senha">
-        <button id="btnLogin">Entrar</button>
+<header>
+  <div class="brand">Conversor de Avisos — PDF → Excel (SPA)</div>
+  <div class="right">
+    <div id="userEmail" class="small"></div>
+    <button id="btnLogout" style="display:none;">Sair</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="tabs">
+    <div id="tabConverter" class="tab active" onclick="showTab('converter')">📄 Conversor</div>
+    <div id="tabHistory" class="tab" onclick="showTab('history')">📁 Histórico</div>
+  </div>
+
+  <!-- CONVERSOR -->
+  <div id="converter" class="panel">
+    <!-- login box (mostra só se não logado) -->
+    <div id="loginBox" style="max-width:420px; margin:0 auto 18px auto;">
+      <h2 style="margin:0 0 12px 0;">Entrar na Plataforma</h2>
+      <div style="display:flex; gap:8px; margin-bottom:8px;">
+        <input id="email" type="email" placeholder="Email" style="flex:1; padding:10px; border-radius:8px; border:1px solid #d1d5db;">
+        <input id="password" type="password" placeholder="Senha" style="flex:1; padding:10px; border-radius:8px; border:1px solid #d1d5db;">
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button id="btnLogin" class="app-btn">Entrar</button>
+        <button id="btnCreate" class="app-btn ghost">Criar conta</button>
+      </div>
+      <p id="loginMsg" class="small" style="margin-top:8px;color:#ef4444;"></p>
     </div>
-</div>
 
-<!-- MAIN PAGE -->
-<div id="mainPage">
-    <nav>
-        <div><b>Conversor PDF</b></div>
-        <div>
-            <button onclick="goToHistory()">Histórico</button>
-            <button class="btn-gray" onclick="logout()">Sair</button>
+    <!-- app area (aparece só se logado) -->
+    <div id="appArea" style="display:none;">
+      <h2>Enviar PDF(s)</h2>
+
+      <div style="margin-top:10px;" class="row">
+        <input id="files" type="file" accept="application/pdf" multiple />
+        <div style="margin-left:auto;">
+          <button id="processBtn" class="app-btn">Compilar e Transformar</button>
+          <button id="downloadBtn" class="app-btn" disabled>Baixar & Salvar no Histórico</button>
         </div>
-    </nav>
+      </div>
 
-    <h2>Carregar Aviso de Pagamento</h2>
-    <input type="file" id="fileInput" accept=".pdf">
-    <button id="btnUpload">Salvar no Firebase</button>
+      <div id="progressContainer"><div id="progressBar"></div></div>
 
-    <div id="uploadStatus"></div>
+      <div class="dashboard" id="dashboardBox">Total em Avisos: R$ 0,00</div>
+
+      <div id="preview"></div>
+    </div>
+
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div id="history" class="panel" style="display:none;">
+    <h2>Histórico de compilados</h2>
+    <p class="small">Aqui são listados os arquivos gerados por você (usuário logado).</p>
+
+    <div id="historyList" class="list">
+      <div class="small">Carregando histórico...</div>
+    </div>
+
+    <div id="historyNotice" style="margin-top:12px;"></div>
+  </div>
+
+  <footer>Gerado com ❤️ — versão SPA (Conversor + Histórico)</footer>
 </div>
 
-<!-- HISTORY PAGE -->
-<div id="historyPage">
-    <nav>
-        <div><b>Histórico</b></div>
-        <div>
-            <button onclick="goToMain()">Voltar</button>
-            <button class="btn-gray" onclick="logout()">Sair</button>
-        </div>
-    </nav>
-
-    <h2>Registros Salvos</h2>
-
-    <label>Data Inicial:</label>
-    <input type="date" id="filterStart">
-
-    <label>Data Final:</label>
-    <input type="date" id="filterEnd">
-
-    <button id="btnFilter">Aplicar Filtro</button>
-
-    <div id="dashboard">Total do período: R$ 0,00</div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>Data</th>
-                <th>Arquivo</th>
-                <th>Valor</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody id="historyTable"></tbody>
-    </table>
-</div>
-
+<!-- FIREBASE (modular) -->
 <script type="module">
+  // Firebase imports (modular)
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getStorage,
+    ref as storageRef,
+    uploadBytes,
+    getDownloadURL
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    query,
+    where,
+    getDocs,
+    orderBy
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ----------------------------------------
-   🔥 Firebase
------------------------------------------*/
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { 
-    getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-import {
-    getFirestore, collection, addDoc, getDocs, query, where, deleteDoc, doc
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBhwpsuCFHZd5Qfnfq1D5rPH20GJ_Hvn2gA", // Substitua com sua chave
+    authDomain: "conversor-avisos.firebaseapp.com",
+    projectId: "conversor-avisos",
+    storageBucket: "conversor-avisos.appspot.com",
+    messagingSenderId: "28289021434",
+    appId: "1:28289021434:web:c8a2674f16c53b8d7c93b6"
+  };
 
-const firebaseConfig = {
-  apiKey: "AIzaSyC_FD33WikHRUVCd2JtH_ok3WF1YtfAFhU",
-  authDomain: "conversor-de-avisos.firebaseapp.com",
-  projectId: "conversor-de-avisos",
-  storageBucket: "conversor-de-avisos.firebasestorage.app",
-  messagingSenderId: "1099286231450",
-  appId: "1:1099286231450:web:94e0b02dec2ef6b0d26223"
-};
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const firestore = getFirestore(app);
+  const storage = getStorage(app);
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+  // Refs & UI Elements
+  const loginBox = document.getElementById("loginBox");
+  const appArea = document.getElementById("appArea");
+  const emailInput = document.getElementById("email");
+  const passwordInput = document.getElementById("password");
+  const btnLogin = document.getElementById("btnLogin");
+  const btnCreate = document.getElementById("btnCreate");
+  const loginMsg = document.getElementById("loginMsg");
+  const btnLogout = document.getElementById("btnLogout");
+  const userEmail = document.getElementById("userEmail");
+  const processBtn = document.getElementById("processBtn");
+  const downloadBtn = document.getElementById("downloadBtn");
+  const filesInput = document.getElementById("files");
+  const progressBar = document.getElementById("progressBar");
+  const progressContainer = document.getElementById("progressContainer");
+  const preview = document.getElementById("preview");
+  const dashboardBox = document.getElementById("dashboardBox");
+  const historyList = document.getElementById("historyList");
+  const historyNotice = document.getElementById("historyNotice");
 
-/* ----------------------------------------
-   🔐 Controle de Rotas
------------------------------------------*/
-function show(page) {
-    loginPage.style.display = "none";
-    mainPage.style.display = "none";
-    historyPage.style.display = "none";
+  let currentUser = null;
 
-    page.style.display = "block";
-}
-
-onAuthStateChanged(auth, user => {
-    if (user) show(mainPage);
-    else show(loginPage);
-});
-
-/* ----------------------------------------
-   🔑 Login
------------------------------------------*/
-btnLogin.onclick = async () => {
-    try {
-        await signInWithEmailAndPassword(auth, email.value, password.value);
-    } catch (e) {
-        alert("Erro ao fazer login");
+  // Show Tab
+  function showTab(tab){
+    if(tab === 'converter'){
+      document.getElementById("tabConverter").classList.add('active');
+      document.getElementById("tabHistory").classList.remove('active');
+      document.getElementById("converter").style.display = 'block';
+      document.getElementById("history").style.display = 'none';
+    } else {
+      document.getElementById("tabHistory").classList.add('active');
+      document.getElementById("tabConverter").classList.remove('active');
+      document.getElementById("history").style.display = 'block';
+      document.getElementById("converter").style.display = 'none';
     }
-};
+  }
 
-/* ----------------------------------------
-   🚪 Logout
------------------------------------------*/
-function logout() { signOut(auth); }
-
-/* ----------------------------------------
-   📄 Salvar Arquivo no Histórico
------------------------------------------*/
-btnUpload.onclick = async () => {
-    let file = fileInput.files[0];
-    if (!file) return alert("Selecione um arquivo");
-
-    let name = file.name;
-    let value = Math.floor(Math.random() * 5000); // simulação — depois você liga no parser
-
-    uploadStatus.innerHTML = "Salvando...";
-
-    try {
-        // verificar duplicados
-        let q = query(collection(db, "avisos"), where("nome", "==", name));
-        let snap = await getDocs(q);
-
-        if (!snap.empty) {
-            uploadStatus.innerHTML = "❌ Arquivo já existe!";
-            return;
-        }
-
-        await addDoc(collection(db, "avisos"), {
-            nome: name,
-            valor: value,
-            data: new Date().toISOString().substring(0, 10)
-        });
-
-        uploadStatus.innerHTML = "✔️ Salvo com sucesso!";
-    } catch (e) {
-        uploadStatus.innerHTML = "❌ Erro ao salvar";
+  // Login User
+  btnLogin.addEventListener("click", () => {
+    const email = emailInput.value;
+    const password = passwordInput.value;
+    if(email && password){
+      signInWithEmailAndPassword(auth, email, password)
+      .then((userCredential) => {
+        currentUser = userCredential.user;
+        loginBox.style.display = 'none';
+        appArea.style.display = 'block';
+        userEmail.textContent = `Logado como ${currentUser.email}`;
+        btnLogout.style.display = 'inline-block';
+      })
+      .catch((error) => {
+        loginMsg.textContent = "Erro ao fazer login, verifique suas credenciais!";
+      });
     }
-};
+  });
 
-/* ----------------------------------------
-   📅 Histórico + Filtros
------------------------------------------*/
-async function loadHistory() {
-    let start = filterStart.value || "0000-00-00";
-    let end   = filterEnd.value || "9999-12-31";
-
-    const table = document.getElementById("historyTable");
-    table.innerHTML = "";
-
-    const all = await getDocs(collection(db, "avisos"));
-
-    let total = 0;
-
-    all.forEach(docu => {
-        let d = docu.data();
-        if (d.data >= start && d.data <= end) {
-            total += d.valor;
-
-            table.innerHTML += `
-                <tr>
-                    <td>${d.data}</td>
-                    <td>${d.nome}</td>
-                    <td>R$ ${d.valor.toFixed(2)}</td>
-                    <td><button class="btn-red" onclick="deleteRegister('${docu.id}')">Excluir</button></td>
-                </tr>
-            `;
-        }
+  // Logout User
+  btnLogout.addEventListener("click", () => {
+    signOut(auth).then(() => {
+      currentUser = null;
+      loginBox.style.display = 'block';
+      appArea.style.display = 'none';
+      btnLogout.style.display = 'none';
+      userEmail.textContent = '';
+      historyList.innerHTML = '<div class="small">Carregando histórico...</div>';
     });
+  });
 
-    dashboard.innerHTML = "Total do período: R$ " + total.toFixed(2);
-}
+  // Process Files
+  processBtn.addEventListener('click', async () => {
+    const files = [...filesInput.files];
+    if (!files.length) { 
+      alert("Selecione PDFs."); 
+      return; 
+    }
 
-window.deleteRegister = async (id) => {
-    await deleteDoc(doc(db, "avisos", id));
-    loadHistory();
-};
+    processBtn.disabled = true;
+    downloadBtn.disabled = true;
+    progressContainer.style.display = 'block';
+    
+    try {
+      await processFiles(files);
+    } catch (error) {
+      console.error("Erro durante o processamento dos arquivos:", error);
+      alert("Ocorreu um erro ao processar os arquivos. Tente novamente.");
+    }
 
-btnFilter.onclick = loadHistory;
+    processBtn.disabled = false;
+  });
 
-/* ----------------------------------------
-   Navegação
------------------------------------------*/
-function goToHistory() {
-    show(historyPage);
-    loadHistory();
-}
+  async function processFiles(files) {
+    let processed = 0;
+    let totalAmount = 0;
+    progressBar.style.width = "0%";
 
-function goToMain() {
-    show(mainPage);
-}
+    for (const file of files) {
+      console.log(`Processando o arquivo: ${file.name}`);
 
+      // Placeholder para a lógica de processamento do PDF (extrair texto, etc.)
+      await new Promise(resolve => setTimeout(resolve, 500)); // Simula processamento
+
+      processed++;
+      progressBar.style.width = ((processed / files.length) * 100) + "%";
+      totalAmount += 100;  // Exemplo de incremento de valor (simulado)
+
+      if (processed === files.length) {
+        dashboardBox.textContent = `Total em Avisos: R$ ${totalAmount.toFixed(2)}`;
+      }
+    }
+
+    progressContainer.style.display = 'none';
+    downloadBtn.disabled = false;
+  }
+  
 </script>
+
 </body>
 </html>
