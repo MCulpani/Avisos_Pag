@@ -121,6 +121,50 @@
   #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:18px; display:none; }
   #progressBar{ height:100%; width:0%; background:#0ea5a4; border-radius:6px; transition:width .25s; }
   #dashboardBox{ margin-top:18px; padding:16px; background:#fff3cd; border:2px solid #ffca2c; border-radius:8px; font-size:20px; font-weight:bold; color:#8a6d3b; }
+
+  /* Aba de Histórico */
+  .tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    padding: 10px 15px;
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  }
+
+  .tab.active {
+    background: #0ea5a4;
+    color: white;
+  }
+
+  #historyList {
+    margin-top: 20px;
+  }
+
+  .item {
+    padding: 10px;
+    background: #f9fafb;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  }
+
+  .item .meta {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+  }
+
+  .item .small {
+    color: #64748b;
+    font-size: 12px;
+  }
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -170,6 +214,12 @@
 
     <div id="preview"></div>
   </div>
+</div>
+
+<!-- ABA HISTÓRICO -->
+<div id="tabs">
+  <div id="tabConverter" class="tab active" onclick="showTab('converter')">📄 Conversor</div>
+  <div id="tabHistory" class="tab" onclick="showTab('history')">📁 Histórico</div>
 </div>
 
 <!-- HISTÓRICO -->
@@ -290,6 +340,15 @@ async function loadHistory() {
       </div>
     `;
     historyList.appendChild(historyItem);
+  });
+}
+
+/* TABS */
+function showTab(tab){
+  const tabs = ['converter', 'history'];
+  tabs.forEach(id => {
+    document.getElementById(id).style.display = id === tab ? 'block' : 'none';
+    document.getElementById(`tab${id.charAt(0).toUpperCase() + id.slice(1)}`).classList.toggle('active', id === tab);
   });
 }
 </script>
