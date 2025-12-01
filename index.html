@@ -62,7 +62,6 @@
     color: #94a3b8;
   }
 
-  /* Ícones dentro dos inputs */
   .input-wrapper i {
     position: absolute;
     top: 50%;
@@ -75,52 +74,32 @@
     font-size: 14px;
   }
 
-  /* BOTÃO MODERNO */
-  #btnLogin {
-    width: 100%;
-    padding: 16px;
-    font-size: 16px;
-    background: linear-gradient(90deg,#0ea5a4,#14b8a6);
+  /* BOTÕES */
+  button.app-btn {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #0ea5a4;
     color: white;
-    border: none;
-    border-radius: 12px;
     cursor: pointer;
     font-weight: 600;
-    transition: background 0.3s, transform 0.1s, box-shadow 0.3s;
   }
 
-  #btnLogin:hover {
-    background: linear-gradient(90deg,#14b8a6,#0ea5a4);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-  }
-
-  #login-msg {
-    color: #ef4444;
-    font-size: 14px;
-    margin-top: 14px;
-  }
-
-  /* APP */
   .card {
     background:#fff; max-width:1000px; margin:40px auto; padding:24px; border-radius:12px;
     box-shadow:0 4px 12px rgba(0,0,0,0.08);
-  }
-
-  button.app-btn {
-    padding:10px 16px;
-    border:0;
-    border-radius:8px;
-    background:#0ea5a4;
-    color:white;
-    cursor:pointer;
   }
 
   #preview table { width:100%; border-collapse:collapse; margin-top:18px; }
   #preview th,#preview td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
   #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:18px; display:none; }
   #progressBar{ height:100%; width:0%; background:#0ea5a4; border-radius:6px; transition:width .25s; }
-  #dashboardBox{ margin-top:18px; padding:16px; background:#fff3cd; border:2px solid #ffca2c; border-radius:8px; font-size:20px; font-weight:bold; color:#8a6d3b; }
+
+  #dashboardBox{
+    margin-top:18px; padding:16px; background:#fff3cd;
+    border:2px solid #ffca2c; border-radius:8px;
+    font-size:20px; font-weight:bold; color:#8a6d3b;
+  }
 </style>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -142,7 +121,7 @@
     <i id="togglePassword">👁️</i>
   </div>
 
-  <button id="btnLogin">Entrar</button>
+  <button id="btnLogin" class="app-btn" style="width:100%;">Entrar</button>
   <p id="login-msg"></p>
 </div>
 
@@ -152,14 +131,17 @@
     <h1>Conversor de Aviso de Pagamento - PDF > Excel</h1>
 
     <input id="files" type="file" accept="application/pdf" multiple />
-    <br><br>
 
-    <!-- BOTÕES: Compilar | Baixar Excel | Logout -->
     <div style="display:flex; align-items:center; gap:10px; margin-top:16px;">
       <button id="processBtn" class="app-btn">Compilar e Transformar</button>
       <button id="downloadBtn" class="app-btn" disabled>Baixar Excel</button>
+
+      <button id="historyBtn" class="app-btn" style="background:#6366f1;">
+        Histórico
+      </button>
+
       <div style="margin-left:auto;">
-        <button id="btnLogout" class="app-btn" style="background:#ff5252;">Sair da conta</button>
+        <button id="btnLogout" class="app-btn" style="background:#ff5252;">Sair</button>
       </div>
     </div>
 
@@ -168,6 +150,27 @@
     <div id="progressContainer"><div id="progressBar"></div></div>
 
     <div id="preview"></div>
+  </div>
+</div>
+
+<!-- HISTÓRICO -->
+<div id="history-area" style="display:none;">
+  <div class="card">
+    <h1>Histórico de Processamentos</h1>
+
+    <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+      <thead>
+        <tr>
+          <th style="padding:8px; border-bottom:1px solid #ddd;">Data</th>
+          <th style="padding:8px; border-bottom:1px solid #ddd;">Total em Avisos</th>
+        </tr>
+      </thead>
+      <tbody id="historyTable"></tbody>
+    </table>
+
+    <button id="backBtn" class="app-btn" style="margin-top:20px;">
+      Voltar ao Conversor
+    </button>
   </div>
 </div>
 
@@ -204,11 +207,8 @@ const btnLogout  = document.getElementById("btnLogout");
 
 /* LOGIN */
 btnLogin.addEventListener("click", async () => {
-  const email = emailInput.value.trim();
-  const pass  = passInput.value;
-
   try {
-    await signInWithEmailAndPassword(auth, email, pass);
+    await signInWithEmailAndPassword(auth, emailInput.value.trim(), passInput.value);
     msgLogin.textContent = "";
   } catch (err) {
     msgLogin.textContent = "Erro: " + err.message;
@@ -220,25 +220,15 @@ btnLogout.addEventListener("click", async () => {
   await signOut(auth);
 });
 
-/* PROTEÇÃO DO APP */
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loginBox.style.display = "none";
-    appBox.style.display = "block";
-  } else {
-    loginBox.style.display = "block";
-    appBox.style.display = "none";
-  }
+/* MOSTRAR / OCULTAR SENHA */
+document.getElementById("togglePassword").addEventListener("click", () => {
+  passInput.type = (passInput.type === "password" ? "text" : "password");
 });
 
-/* MOSTRAR / OCULTAR SENHA */
-const togglePassword = document.getElementById("togglePassword");
-togglePassword.addEventListener("click", () => {
-  if(passInput.type === "password"){
-    passInput.type = "text";
-  } else {
-    passInput.type = "password";
-  }
+/* PROTEÇÃO DO APP */
+onAuthStateChanged(auth, (user) => {
+  loginBox.style.display = user ? "none" : "block";
+  appBox.style.display   = user ? "block" : "none";
 });
 </script>
 
@@ -255,18 +245,28 @@ const progressContainer = document.getElementById("progressContainer");
 const progressBar = document.getElementById("progressBar");
 const dashboardBox = document.getElementById("dashboardBox");
 
+const historyBtn = document.getElementById("historyBtn");
+const historyArea = document.getElementById("history-area");
+const historyTable = document.getElementById("historyTable");
+const backBtn = document.getElementById("backBtn");
+
 let compiled = [];
 let workbookBinary = null;
 
+/* ============================
+    PDF EXTRAÇÃO
+============================ */
 async function extractText(file){
   const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({data: buf}).promise;
   let text = "";
+
   for(let i = 1; i <= pdf.numPages; i++){
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     text += content.items.map(x => x.str).join(" ") + "\n";
   }
+
   return text;
 }
 
@@ -287,7 +287,6 @@ const rowRegex =
   /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
 
 function parseCurrency(v){
-  if(!v) return null;
   return parseFloat(v.replace(/\./g,"").replace(",","."));
 }
 
@@ -325,10 +324,56 @@ function extractRows(txt, local, documento){
   return rows;
 }
 
+/* ============================
+      HISTÓRICO LOCALSTORAGE
+============================ */
+function saveToHistory(total) {
+  const today = new Date().toISOString().slice(0,10);
+
+  let history = JSON.parse(localStorage.getItem("history")) || [];
+
+  history = history.filter(entry => entry.date !== today);
+
+  history.push({ date: today, total: total });
+
+  localStorage.setItem("history", JSON.stringify(history));
+}
+
+function loadHistory() {
+  const history = JSON.parse(localStorage.getItem("history")) || [];
+  historyTable.innerHTML = "";
+
+  history.forEach(item => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="padding:8px; border-bottom:1px solid #ddd;">${item.date}</td>
+      <td style="padding:8px; border-bottom:1px solid #ddd;">
+        ${Number(item.total).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+      </td>`;
+    historyTable.appendChild(tr);
+  });
+}
+
+historyBtn.addEventListener("click", () => {
+  appArea.style.display = "none";
+  historyArea.style.display = "block";
+  loadHistory();
+});
+
+backBtn.addEventListener("click", () => {
+  historyArea.style.display = "none";
+  appArea.style.display = "block";
+});
+
+/* ============================
+      PROCESSAMENTO
+============================ */
 async function processFiles(files){
   compiled = [];
-  let processed = 0;
   progressContainer.style.display = "block";
+  progressBar.style.width = "0%";
+
+  let processed = 0;
 
   for(const f of files){
     const txt = await extractText(f);
@@ -341,19 +386,22 @@ async function processFiles(files){
     compiled.push(...rows);
 
     processed++;
-    progressBar.style.width = ((processed / files.length) * 100) + "%";
+    progressBar.style.width = (processed/files.length * 100) + "%";
   }
 }
 
-function updateDashboard(rows){
-  const total = rows.reduce(
-    (sum, r) => sum + (r["Montante bruto"] || 0), 0
-  );
+/* Atualiza dashboard + histórico */
+function updateDashboardAndHistory(rows){
+  const total = rows.reduce((sum,r)=> sum + (r["Montante bruto"]||0), 0);
+
   dashboardBox.textContent =
     "Total em Avisos: " +
     total.toLocaleString("pt-BR",{style:"currency",currency:"BRL"});
+
+  saveToHistory(total);
 }
 
+/* Renderização */
 function renderPreview(rows){
   if(!rows.length){
     previewEl.innerHTML = "<p>Nenhum dado encontrado.</p>";
@@ -382,6 +430,7 @@ function buildExcel(rows){
   return wb;
 }
 
+/* Button: PROCESSAR */
 processBtn.addEventListener("click", async () =>{
   const files = [...filesInput.files];
   if(!files.length){
@@ -391,11 +440,10 @@ processBtn.addEventListener("click", async () =>{
 
   processBtn.disabled = true;
   downloadBtn.disabled = true;
-  progressBar.style.width = "0%";
 
   await processFiles(files);
   renderPreview(compiled);
-  updateDashboard(compiled);
+  updateDashboardAndHistory(compiled);
 
   if(compiled.length){
     workbookBinary = buildExcel(compiled);
@@ -405,6 +453,7 @@ processBtn.addEventListener("click", async () =>{
   processBtn.disabled = false;
 });
 
+/* Button: DOWNLOAD */
 downloadBtn.addEventListener("click", ()=>{
   if(!workbookBinary) return;
   XLSX.writeFile(
