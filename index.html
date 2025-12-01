@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Conversor de Aviso de Pagamento - PDF > Excel</title>
+<title>Conversor de Aviso de Pagamento - PDF &gt; Excel</title>
 
-<!-- FONTE MODERNA -->
+<!-- FONTE -->
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
@@ -86,11 +86,37 @@
     border:2px solid #ffca2c; border-radius:8px;
     font-size:20px; font-weight:bold; color:#8a6d3b;
   }
+
+  /* Centralizar tabela do histórico */
+  #history-area th, #historyTable td {
+    text-align: center !important;
+  }
+
+  /* Small responsive canvas */
+  .chart-wrapper {
+    max-width: 900px;
+    margin-top: 20px;
+  }
+
+  /* Export button group */
+  .history-controls {
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:flex-end;
+    margin-top:12px;
+  }
+
+  /* Center table header */
+  #history-area table thead th {
+    text-align:center;
+  }
 </style>
 
+<!-- Bibliotecas -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -115,7 +141,7 @@
 <!-- APP -->
 <div id="app-area" style="display:none;">
   <div class="card">
-    <h1>Conversor de Aviso de Pagamento - PDF > Excel</h1>
+    <h1>Conversor de Aviso de Pagamento - PDF &gt; Excel</h1>
 
     <input id="files" type="file" accept="application/pdf" multiple />
 
@@ -145,11 +171,20 @@
   <div class="card">
     <h1>Histórico de Processamentos</h1>
 
+    <div class="history-controls">
+      <button id="exportHistoryBtn" class="app-btn" style="background:#2563eb;">Exportar Histórico (Excel)</button>
+      <button id="clearHistoryBtn" class="app-btn" style="background:#ef4444;">Limpar Histórico</button>
+    </div>
+
+    <div class="chart-wrapper">
+      <canvas id="historyChart" width="900" height="300"></canvas>
+    </div>
+
     <table style="width:100%; border-collapse:collapse; margin-top:20px;">
       <thead>
         <tr>
-          <th style="padding:8px; border-bottom:1px solid #ddd;">Data</th>
-          <th style="padding:8px; border-bottom:1px solid #ddd;">Total em Avisos</th>
+          <th style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">Data</th>
+          <th style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">Total em Avisos</th>
         </tr>
       </thead>
       <tbody id="historyTable"></tbody>
@@ -161,7 +196,7 @@
   </div>
 </div>
 
-<!-- FIREBASE AUTH -->
+<!-- FIREBASE AUTH (mantido igual) -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
@@ -239,8 +274,11 @@ const historyArea = document.getElementById("history-area");
 const historyTable = document.getElementById("historyTable");
 const backBtn = document.getElementById("backBtn");
 
-const appBox = document.getElementById("app-area");   <!-- ESSENCIAL -->
-const loginBox = document.getElementById("login-area"); <!-- ESSENCIAL -->
+const exportHistoryBtn = document.getElementById("exportHistoryBtn");
+const clearHistoryBtn = document.getElementById("clearHistoryBtn");
+
+const appBox = document.getElementById("app-area");
+const loginBox = document.getElementById("login-area");
 
 let compiled = [];
 let workbookBinary = null;
@@ -274,9 +312,10 @@ function detectLocation(txt){
 }
 
 const rowRegex =
-/(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
+  /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
 
 function parseCurrency(v){
+  if(!v) return 0;
   return parseFloat(v.replace(/\./g,"").replace(",","."));
 }
 
@@ -298,7 +337,7 @@ function getCodigoFilial(local){
 }
 
 function extractRows(txt, local, documento){
-  let rows = []; let m;
+  let rows = [], m;
   while((m = rowRegex.exec(txt)) !== null){
     rows.push({
       "Local": local,
@@ -322,28 +361,119 @@ function saveToHistory(total){
 
   let history = JSON.parse(localStorage.getItem("history")) || [];
 
+  // Remove duplicados da mesma data (mantém apenas o último total do dia)
   history = history.filter(h => h.date !== today);
 
   history.push({ date: today, total: total });
 
   localStorage.setItem("history", JSON.stringify(history));
+  // atualizar chart se estiver aberta
+  if(historyArea.style.display === "block") {
+    loadHistory();
+  }
 }
+
+let chartInstance = null;
 
 function loadHistory(){
   const history = JSON.parse(localStorage.getItem("history")) || [];
   historyTable.innerHTML = "";
 
+  // ordenar por data ascendente
+  history.sort((a,b) => a.date.localeCompare(b.date));
+
   history.forEach(item=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
-      <td style="padding:8px; border-bottom:1px solid #ddd;">${item.date}</td>
-      <td style="padding:8px; border-bottom:1px solid #ddd;">
+      <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">${item.date}</td>
+      <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">
         ${Number(item.total).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
       </td>`;
     historyTable.appendChild(tr);
   });
+
+  // Atualizar gráfico
+  const labels = history.map(h => h.date);
+  const data = history.map(h => Number(h.total));
+
+  const ctx = document.getElementById('historyChart').getContext('2d');
+
+  if(chartInstance){
+    chartInstance.data.labels = labels;
+    chartInstance.data.datasets[0].data = data;
+    chartInstance.update();
+  } else {
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Total em Avisos',
+          data: data,
+          fill: false,
+          tension: 0.2,
+          pointRadius: 4,
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            ticks: {
+              callback: function(value) {
+                return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+              }
+            }
+          }
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const v = context.parsed.y || 0;
+                return v.toLocaleString('pt-BR', { style:'currency', currency:'BRL' });
+              }
+            }
+          }
+        }
+      }
+    });
+  }
 }
 
+/* Exportar histórico para Excel */
+exportHistoryBtn.addEventListener('click', () => {
+  const history = JSON.parse(localStorage.getItem("history")) || [];
+  if(!history.length){
+    alert("Nenhum registro no histórico para exportar.");
+    return;
+  }
+
+  // montar worksheet
+  const ws_data = [
+    ["Data", "Total em Avisos"]
+  ];
+  history.forEach(h => {
+    ws_data.push([h.date, Number(h.total)]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Histórico");
+
+  XLSX.writeFile(wb, "historico_" + new Date().toISOString().slice(0,10) + ".xlsx");
+});
+
+/* Limpar histórico */
+clearHistoryBtn.addEventListener('click', () => {
+  if(!confirm("Deseja realmente limpar todo o histórico?")) return;
+  localStorage.removeItem("history");
+  loadHistory();
+});
+
+/* Navegação histórico */
 historyBtn.addEventListener("click", ()=>{
   appBox.style.display = "none";
   historyArea.style.display = "block";
@@ -414,7 +544,7 @@ function buildExcel(rows){
   return wb;
 }
 
-/* BOTÃO PROCESSAR */
+/* BOTÕES */
 processBtn.addEventListener("click", async ()=>{
   const files = [...filesInput.files];
   if(!files.length){ alert("Selecione PDFs."); return; }
@@ -434,10 +564,8 @@ processBtn.addEventListener("click", async ()=>{
   processBtn.disabled = false;
 });
 
-/* DOWNLOAD */
 downloadBtn.addEventListener("click", ()=>{
   if(!workbookBinary) return;
-
   XLSX.writeFile(
     workbookBinary,
     "compilado_"+new Date().toISOString().slice(0,10)+".xlsx"
