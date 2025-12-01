@@ -184,7 +184,6 @@ const historyArea = document.getElementById("history-area");
 const historyTable = document.getElementById("historyTable");
 const backBtn = document.getElementById("backBtn");
 const exportHistoryBtn = document.getElementById("exportHistoryBtn");
-const clearHistoryBtn = document.getElementById("clearHistoryBtn");
 const filtroInicio = document.getElementById("filtroInicio");
 const filtroFim = document.getElementById("filtroFim");
 const btnAplicarFiltro = document.getElementById("btnAplicarFiltro");
@@ -395,11 +394,6 @@ exportHistoryBtn.addEventListener('click', () => {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Histórico");
   XLSX.writeFile(wb, "historico_" + new Date().toISOString().slice(0,10) + ".xlsx");
-});
-clearHistoryBtn.addEventListener('click', () => {
-  if(!confirm("Deseja realmente limpar todo o histórico?")) return;
-  localStorage.removeItem("history");
-  loadHistory();
 });
 btnAplicarFiltro.addEventListener('click', () => {
   loadHistory();
