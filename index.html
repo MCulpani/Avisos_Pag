@@ -16,7 +16,7 @@
     padding: 0;
   }
 
-  /* LOGIN MODERNO */
+  /* LOGIN */
   #login-area {
     max-width: 400px;
     margin: 6vh auto;
@@ -25,7 +25,6 @@
     border-radius: 20px;
     box-shadow: 0 12px 30px rgba(0,0,0,0.12);
     text-align: center;
-    position: relative;
   }
 
   #login-area h2 {
@@ -52,26 +51,12 @@
     transition: border 0.3s, box-shadow 0.3s;
   }
 
-  .input-wrapper input:focus {
-    border-color: #0ea5a4;
-    box-shadow: 0 0 0 3px rgba(14, 165, 164, 0.2);
-    outline: none;
-  }
-
-  .input-wrapper input::placeholder {
-    color: #94a3b8;
-  }
-
   .input-wrapper i {
     position: absolute;
     top: 50%;
     right: 16px;
     transform: translateY(-50%);
-    font-style: normal;
-    color: #64748b;
     cursor: pointer;
-    user-select: none;
-    font-size: 14px;
   }
 
   /* BOTÕES */
@@ -92,6 +77,7 @@
 
   #preview table { width:100%; border-collapse:collapse; margin-top:18px; }
   #preview th,#preview td { border-bottom:1px solid #e2e8f0; padding:6px 8px; font-size:13px; }
+
   #progressContainer{ width:100%; background:#e2e8f0; height:12px; border-radius:6px; margin-top:18px; display:none; }
   #progressBar{ height:100%; width:0%; background:#0ea5a4; border-radius:6px; transition:width .25s; }
 
@@ -104,6 +90,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
 </head>
 <body>
 
@@ -113,7 +100,7 @@
 
   <div class="input-wrapper">
     <input id="email" type="email" placeholder="Email" />
-    <i class="user-icon">👤</i>
+    <i>👤</i>
   </div>
 
   <div class="input-wrapper">
@@ -197,7 +184,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 const loginBox = document.getElementById("login-area");
-const appBox   = document.getElementById("app-area");
+const appBox = document.getElementById("app-area");
 const msgLogin = document.getElementById("login-msg");
 
 const emailInput = document.getElementById("email");
@@ -220,15 +207,15 @@ btnLogout.addEventListener("click", async () => {
   await signOut(auth);
 });
 
-/* MOSTRAR / OCULTAR SENHA */
+/* TOGGLE SENHA */
 document.getElementById("togglePassword").addEventListener("click", () => {
-  passInput.type = (passInput.type === "password" ? "text" : "password");
+  passInput.type = passInput.type === "password" ? "text" : "password";
 });
 
-/* PROTEÇÃO DO APP */
+/* PROTEÇÃO */
 onAuthStateChanged(auth, (user) => {
   loginBox.style.display = user ? "none" : "block";
-  appBox.style.display   = user ? "block" : "none";
+  appBox.style.display = user ? "block" : "none";
 });
 </script>
 
@@ -241,8 +228,10 @@ const filesInput = document.getElementById("files");
 const processBtn = document.getElementById("processBtn");
 const downloadBtn = document.getElementById("downloadBtn");
 const previewEl = document.getElementById("preview");
+
 const progressContainer = document.getElementById("progressContainer");
 const progressBar = document.getElementById("progressBar");
+
 const dashboardBox = document.getElementById("dashboardBox");
 
 const historyBtn = document.getElementById("historyBtn");
@@ -250,12 +239,13 @@ const historyArea = document.getElementById("history-area");
 const historyTable = document.getElementById("historyTable");
 const backBtn = document.getElementById("backBtn");
 
+const appBox = document.getElementById("app-area");   <!-- ESSENCIAL -->
+const loginBox = document.getElementById("login-area"); <!-- ESSENCIAL -->
+
 let compiled = [];
 let workbookBinary = null;
 
-/* ============================
-    PDF EXTRAÇÃO
-============================ */
+/* EXTRAÇÃO PDF */
 async function extractText(file){
   const buf = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({data: buf}).promise;
@@ -276,7 +266,7 @@ const LOCATIONS = [
 ];
 
 function detectLocation(txt){
-  let clean = txt.replace(/\s+/g, ' ').toUpperCase();
+  let clean = txt.replace(/\s+/g," ").toUpperCase();
   for(const loc of LOCATIONS){
     if(clean.includes(loc)) return loc;
   }
@@ -284,7 +274,7 @@ function detectLocation(txt){
 }
 
 const rowRegex =
-  /(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
+/(\d{10,})\s+(\d+-(?:\d+|U))\s+(\d{2}\.\d{2}\.\d{4})\s+([\d.,]+)\s+([\d.,]+)/g;
 
 function parseCurrency(v){
   return parseFloat(v.replace(/\./g,"").replace(",","."));
@@ -308,7 +298,7 @@ function getCodigoFilial(local){
 }
 
 function extractRows(txt, local, documento){
-  let rows = [], m;
+  let rows = []; let m;
   while((m = rowRegex.exec(txt)) !== null){
     rows.push({
       "Local": local,
@@ -325,25 +315,25 @@ function extractRows(txt, local, documento){
 }
 
 /* ============================
-      HISTÓRICO LOCALSTORAGE
+    HISTÓRICO
 ============================ */
-function saveToHistory(total) {
+function saveToHistory(total){
   const today = new Date().toISOString().slice(0,10);
 
   let history = JSON.parse(localStorage.getItem("history")) || [];
 
-  history = history.filter(entry => entry.date !== today);
+  history = history.filter(h => h.date !== today);
 
   history.push({ date: today, total: total });
 
   localStorage.setItem("history", JSON.stringify(history));
 }
 
-function loadHistory() {
+function loadHistory(){
   const history = JSON.parse(localStorage.getItem("history")) || [];
   historyTable.innerHTML = "";
 
-  history.forEach(item => {
+  history.forEach(item=>{
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td style="padding:8px; border-bottom:1px solid #ddd;">${item.date}</td>
@@ -354,20 +344,18 @@ function loadHistory() {
   });
 }
 
-historyBtn.addEventListener("click", () => {
+historyBtn.addEventListener("click", ()=>{
   appBox.style.display = "none";
   historyArea.style.display = "block";
   loadHistory();
 });
 
-backBtn.addEventListener("click", () => {
+backBtn.addEventListener("click", ()=>{
   historyArea.style.display = "none";
   appBox.style.display = "block";
 });
 
-/* ============================
-      PROCESSAMENTO
-============================ */
+/* PROCESSAMENTO */
 async function processFiles(files){
   compiled = [];
   progressContainer.style.display = "block";
@@ -386,13 +374,12 @@ async function processFiles(files){
     compiled.push(...rows);
 
     processed++;
-    progressBar.style.width = (processed/files.length * 100) + "%";
+    progressBar.style.width = (processed/files.length*100)+"%";
   }
 }
 
-/* Atualiza dashboard + histórico */
 function updateDashboardAndHistory(rows){
-  const total = rows.reduce((sum,r)=> sum + (r["Montante bruto"]||0), 0);
+  const total = rows.reduce((sum, r)=> sum + (r["Montante bruto"] || 0), 0);
 
   dashboardBox.textContent =
     "Total em Avisos: " +
@@ -401,25 +388,22 @@ function updateDashboardAndHistory(rows){
   saveToHistory(total);
 }
 
-/* Renderização */
 function renderPreview(rows){
   if(!rows.length){
-    previewEl.innerHTML = "<p>Nenhum dado encontrado.</p>";
+    previewEl.innerHTML="<p>Nenhum dado encontrado.</p>";
     return;
   }
 
   const cols = Object.keys(rows[0]);
   let html = "<table><thead><tr>" +
-             cols.map(c => `<th>${c}</th>`).join("") +
+             cols.map(c=>`<th>${c}</th>`).join("") +
              "</tr></thead><tbody>";
 
-  rows.slice(0,30).forEach(r =>{
-    html += "<tr>" +
-            cols.map(c => `<td>${r[c] ?? ""}</td>`).join("") +
-            "</tr>";
+  rows.slice(0,30).forEach(r=>{
+    html+="<tr>"+cols.map(c=>`<td>${r[c]??""}</td>`).join("")+"</tr>";
   });
 
-  html += "</tbody></table>";
+  html+="</tbody></table>";
   previewEl.innerHTML = html;
 }
 
@@ -430,13 +414,10 @@ function buildExcel(rows){
   return wb;
 }
 
-/* Button: PROCESSAR */
-processBtn.addEventListener("click", async () =>{
+/* BOTÃO PROCESSAR */
+processBtn.addEventListener("click", async ()=>{
   const files = [...filesInput.files];
-  if(!files.length){
-    alert("Selecione PDFs.");
-    return;
-  }
+  if(!files.length){ alert("Selecione PDFs."); return; }
 
   processBtn.disabled = true;
   downloadBtn.disabled = true;
@@ -447,18 +428,19 @@ processBtn.addEventListener("click", async () =>{
 
   if(compiled.length){
     workbookBinary = buildExcel(compiled);
-    downloadBtn.disabled = false;
+    downloadBtn.disabled=false;
   }
 
   processBtn.disabled = false;
 });
 
-/* Button: DOWNLOAD */
+/* DOWNLOAD */
 downloadBtn.addEventListener("click", ()=>{
   if(!workbookBinary) return;
+
   XLSX.writeFile(
     workbookBinary,
-    "compilado_" + new Date().toISOString().slice(0,10) + ".xlsx"
+    "compilado_"+new Date().toISOString().slice(0,10)+".xlsx"
   );
 });
 </script>
