@@ -242,8 +242,8 @@ function extractRows(txt, local, documento, pdfDate){
   let rows = [], m;
   while((m = rowRegex.exec(txt)) !== null){
     rows.push({
-      "Local": local,
       "Código filial": getCodigoFilial(local),
+      "Local": local,
       "Documento": documento,
       "Nº doc SAP": m[1],
       "Doc Referência": m[2],
