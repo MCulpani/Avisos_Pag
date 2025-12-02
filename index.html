@@ -211,16 +211,18 @@ async function extractText(file){
   }
   return text;
 }
-  function extractPDFDate(txt){
-  if(!txt) return null;
-  const m = txt.match(/Data[\s:\-]*?(\d{2}[\/\.]\d{2}[\/\.]\d{4})/i);
-  if(!m) return null;
+function extractPDFDate(txt) {
+  if (!txt) return null;
+  const regex = /Data[\s:\-]*?(\d{2}[\/\.\-]\d{2}[\/\.\-]\d{4})/i;
+  const m = txt.match(regex);
+  if (!m) return null;
+  
   const raw = m[1].replace(/\./g, '/');
   const parts = raw.split('/');
-  if(parts.length !== 3) return null;
+  if (parts.length !== 3) return null;
   const yyyy = parts[2];
-  const mm = parts[1].padStart(2,'0');
-  const dd = parts[0].padStart(2,'0');
+  const mm = parts[1].padStart(2, '0');
+  const dd = parts[0].padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 }
 function formatDateDisplay(isoDate){
