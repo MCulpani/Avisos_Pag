@@ -192,7 +192,7 @@ function extractPDFDate(txt) {
   const yyyy = parts[2];
   const mm = parts[1].padStart(2, '0');
   const dd = parts[0].padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
+  return `${dd}/${mm}${yyyy}`;
 }
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
@@ -239,7 +239,7 @@ function extractPDFDate(txt){
   const yyyy = parts[2];
   const mm = parts[1].padStart(2,'0');
   const dd = parts[0].padStart(2,'0');
-  return `${yyyy}-${mm}-${dd}`;
+  return `${dd}/${mm}/${yyyy}`;
 }
 function formatDateDisplay(isoDate){
   if(!isoDate) return "";
