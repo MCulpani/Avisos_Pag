@@ -53,7 +53,51 @@ table td { border-bottom:1px solid #d1d5db !important; }
     box-shadow:0 6px 18px rgba(0,0,0,0.08) !important;
 }
 </style>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js">
+    <script>
+      document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+        if (confirm('Tem certeza de que deseja limpar o histórico?')) {
+          localStorage.removeItem('history');
+          loadHistory(); // Reload the history table
+        }
+      });
+    
+    <script>
+      document.getElementById('clearHistoryBtn').addEventListener('click', () => {
+        if (confirm('Tem certeza de que deseja limpar o histórico?')) {
+          // Clear the history from localStorage
+          localStorage.removeItem('history');
+          // Reload the history table after clearing
+          loadHistory(); 
+        }
+      });
+
+      // Ensure the loadHistory function is working correctly to populate the table after clearing
+      function loadHistory() {
+        // Retrieve history from localStorage
+        const history = JSON.parse(localStorage.getItem('history')) || [];
+        const tableBody = document.getElementById('historyTable');
+        tableBody.innerHTML = ''; // Clear current table content
+
+        // Loop through history items and populate the table
+        history.forEach(item => {
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${item.date}</td>
+            <td>${item.total}</td>
+            <td><button class="delete-btn" style="background:#ff5252;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;">Excluir</button></td>
+          `;
+          tableBody.appendChild(row);
+        });
+      }
+
+      // Call loadHistory when the page loads to display the current history
+      document.addEventListener('DOMContentLoaded', loadHistory);
+    </script>
+    </body>
+    
+    </body>
+    
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -98,7 +142,10 @@ table td { border-bottom:1px solid #d1d5db !important; }
           <button id="backBtn" class="app-btn">Voltar ao Conversor</button>
         </div>
       </div>
-      <div class="filters-row" style="margin-top:4px;">
+      
+    <div class="filters-row" style="margin-top:4px;">
+      <button id="clearHistoryBtn" class="app-btn" style="background:#ef4444;">Limpar Histórico</button>
+    
         <label>Data inicial:
           <input type="date" id="filtroInicio" style="padding:6px; margin-left:6px;">
         </label>
