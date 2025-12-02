@@ -262,7 +262,7 @@ function extractRows(txt, local, documento, pdfDate){
       "Código filial": getCodigoFilial(local),
       "Local": local,
       "Documento": documento,
-      "Data do PDF": pdfDate,
+      "Data Compensação": pdfDate,
       "Nº doc SAP": m[1],
       "Doc Referência": m[2],
       "Data": parseDateBR(m[3]),
@@ -274,7 +274,7 @@ function extractRows(txt, local, documento, pdfDate){
 }
 function saveToHistoryFromPDF(rows){
   if(!rows || !rows.length) return;
-  const historyDate = rows.find(r => r["Data do PDF"])?.["Data do PDF"] || null;
+  const historyDate = rows.find(r => r["Data Compensação"])?.["Data Compensação"] || null;
   const dateToSave = historyDate || new Date().toISOString().slice(0,10);
   const total = rows.reduce((sum, r) => sum + (r["Montante bruto"] || 0), 0);
   let history = JSON.parse(localStorage.getItem("history")) || [];
