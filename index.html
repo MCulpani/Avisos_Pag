@@ -147,13 +147,15 @@ table td { border-bottom:1px solid #d1d5db !important; }
     
     
 <table style="width:100%; border-collapse:collapse; margin-top:20px;">
-      <thead>
-        <tr>
-          <th style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">Data</th>
-          <th style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">Total em Avisos</th>
-	 <th style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">Ação</th>
-        </tr>
-      </thead>
+      
+    <thead>
+      <tr>
+        <th style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">Data</th>
+        <th style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">Total em Avisos</th>
+        <th style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">Ação</th>
+      </tr>
+    </thead>
+    
       <tbody id="historyTable"></tbody>
     </table>
   </div>
@@ -193,7 +195,7 @@ function extractPDFDate(txt) {
   const yyyy = parts[2];
   const mm = parts[1].padStart(2, '0');
   const dd = parts[0].padStart(2, '0');
-  return `${dd}/${mm}${yyyy}`;
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
@@ -240,7 +242,7 @@ function extractPDFDate(txt){
   const yyyy = parts[2];
   const mm = parts[1].padStart(2,'0');
   const dd = parts[0].padStart(2,'0');
-  return `${dd}/${mm}/${yyyy}`;
+  return `${yyyy}-${mm}-${dd}`;
 }
 function formatDateDisplay(isoDate){
   if(!isoDate) return "";
@@ -286,18 +288,6 @@ function saveToHistoryFromPDF(rows){
   localStorage.setItem("history", JSON.stringify(history));
   if(historyArea.style.display === "block") loadHistory();
 }
-function removeRow(button) {
-          const row = button.closest('tr');
-          const date = row.cells[0].textContent;
-          
-          // Get the history from localStorage and remove the item with the matching date
-          let history = JSON.parse(localStorage.getItem("history")) || [];
-          history = history.filter(item => item.date !== date);
-          localStorage.setItem("history", JSON.stringify(history));
-          
-          // Remove the row from the table
-          row.remove();
-}
 function loadHistory(){
   let history = JSON.parse(localStorage.getItem("history")) || [];
   const inicio = filtroInicio.value;
@@ -305,31 +295,14 @@ function loadHistory(){
   if(inicio) history = history.filter(h => h.date >= inicio);
   if(fim) history = history.filter(h => h.date <= fim);
   history.sort((a,b) => b.date.localeCompare(a.date));
-  historyTable.innerHTML = ""; // Clear existing rows
+  historyTable.innerHTML = "";
   history.forEach(item=>{
-   const row = document.createElement("tr");
-              row.innerHTML = `
-                  <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">${formatDateDisplay(item.date)}</td>
-                  <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">${Number(item.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
-                  <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">
-                      <button class="delete-btn" style="background:#ff5252;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;" onclick="removeRow(this)">Excluir</button>
-                  </td>
-`;
- tableBody.appendChild(row);
-          });
-      }
-      
-      // Helper function to format the date in the table
-      function formatDateDisplay(isoDate) {
-          if (!isoDate) return "";
-          const p = isoDate.split('-');
-          return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : isoDate;
-      }
-      
-      // Initialize the table when the page loads
-      document.addEventListener("DOMContentLoaded", loadHistory);
-
-
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">${formatDateDisplay(item.date)}</td>
+      <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">
+        ${Number(item.total).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+      </td>`;
     historyTable.appendChild(tr);
   });
   const labels = history.map(h => formatDateDisplay(h.date));
@@ -525,6 +498,51 @@ processBtn.addEventListener("click", async ()=>{
 });
 downloadBtn.addEventListener("click", ()=>{ if(!workbookBinary) return; XLSX.writeFile(workbookBinary, "compilado_"+new Date().toISOString().slice(0,10)+".xlsx"); });
 </script>
-</script>
-</body>
+
+    <script>
+      // Function to remove a row from the table and update localStorage
+      function removeRow(button) {
+          const row = button.closest('tr');
+          const date = row.cells[0].textContent;
+          
+          // Get the history from localStorage and remove the item with the matching date
+          let history = JSON.parse(localStorage.getItem("history")) || [];
+          history = history.filter(item => item.date !== date);
+          localStorage.setItem("history", JSON.stringify(history));
+          
+          // Remove the row from the table
+          row.remove();
+      }
+
+      // Load history from localStorage and display it in the table
+      function loadHistory() {
+          let history = JSON.parse(localStorage.getItem("history")) || [];
+          const tableBody = document.getElementById("historyTable");
+          tableBody.innerHTML = "";  // Clear existing rows
+
+          history.forEach(item => {
+              const row = document.createElement("tr");
+              row.innerHTML = `
+                  <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">${formatDateDisplay(item.date)}</td>
+                  <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">${Number(item.total).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</td>
+                  <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">
+                      <button class="delete-btn" style="background:#ff5252;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;" onclick="removeRow(this)">Excluir</button>
+                  </td>
+              `;
+              tableBody.appendChild(row);
+          });
+      }
+      
+      // Helper function to format the date in the table
+      function formatDateDisplay(isoDate) {
+          if (!isoDate) return "";
+          const p = isoDate.split('-');
+          return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : isoDate;
+      }
+      
+      // Initialize the table when the page loads
+      document.addEventListener("DOMContentLoaded", loadHistory);
+    </script>
+    </body>
+    
 </html>
