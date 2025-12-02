@@ -301,6 +301,9 @@ function loadHistory(){
       <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">
         ${Number(item.total).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
       </td>`;
+      <td style="padding:8px; border-bottom:1px solid #ddd; text-align:center;">
+          <button class="delete-btn" style="background:#ff5252;color:white;padding:6px 12px;border-radius:8px;cursor:pointer;" onclick="removeRow(this)">Excluir</button>
+
     historyTable.appendChild(tr);
   });
   const labels = history.map(h => formatDateDisplay(h.date));
