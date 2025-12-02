@@ -262,12 +262,12 @@ function extractRows(txt, local, documento, pdfDate){
       "Código filial": getCodigoFilial(local),
       "Local": local,
       "Documento": documento,
-      "Data Compensado": parseDateBR(m[3]),
+      "Data do PDF": pdfDate,
       "Nº doc SAP": m[1],
       "Doc Referência": m[2],
+      "Data": parseDateBR(m[3]),
       "Desconto": parseCurrency(m[4]),
-      "Montante bruto": parseCurrency(m[5]),
-      "Data do PDF": pdfDate
+      "Montante bruto": parseCurrency(m[5])
     });
   }
   return rows;
