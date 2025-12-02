@@ -177,6 +177,22 @@ document.getElementById("togglePassword").addEventListener("click", () => { pass
 onAuthStateChanged(auth, (user) => { loginBox.style.display = user ? "none" : "block"; appBox.style.display = user ? "block" : "none"; });
 </script>
 <script>
+function extractPDFDate(txt) {
+  if (!txt) return null;
+  // Regex para capturar a data após "Data" no texto
+  const regex = /Data[\s:\-]*?(\d{2}[\/\.\-]\d{2}[\/\.\-]\d{4})/i;
+  const m = txt.match(regex);
+  if (!m) return null;
+  
+  // Processamento da data extraída para garantir o formato correto
+  const raw = m[1].replace(/\./g, '/');  // Substitui pontos por barras
+  const parts = raw.split('/');
+  if (parts.length !== 3) return null;
+  const yyyy = parts[2];
+  const mm = parts[1].padStart(2, '0');
+  const dd = parts[0].padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
 const filesInput = document.getElementById("files");
@@ -211,19 +227,23 @@ async function extractText(file){
   }
   return text;
 }
-function extractPDFDate(txt) {
-  if (!txt) return null;
-  const regex = /Data[\s:\-]*?(\d{2}[\/\.\-]\d{2}[\/\.\-]\d{4})/i;
-  const m = txt.match(regex);
-  if (!m) return null;
-  
+function extractPDFDate(txt){
+  if(!txt) return null;
+  const m = txt.match(/Data[\s:\-]*?(\d{2}[\/\.]\d{2}[\/\.]\d{4})/i);
+  if(!m) return null;
   const raw = m[1].replace(/\./g, '/');
   const parts = raw.split('/');
-  if (parts.length !== 3) return null;
+  if(parts.length !== 3) return null;
   const yyyy = parts[2];
-  const mm = parts[1].padStart(2, '0');
-  const dd = parts[0].padStart(2, '0');
+  const mm = parts[1].padStart(2,'0');
+  const dd = parts[0].padStart(2,'0');
   return `${yyyy}-${mm}-${dd}`;
+}
+function formatDateDisplay(isoDate){
+  if(!isoDate) return "";
+  const p = isoDate.split('-');
+  if(p.length !== 3) return isoDate;
+  return `${p[2]}/${p[1]}/${p[0]}`;
 }
 const LOCATIONS = ["JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG","ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"];
 function detectLocation(txt){
