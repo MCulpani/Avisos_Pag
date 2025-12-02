@@ -225,12 +225,6 @@ function extractPDFDate(txt) {
   const dd = parts[0].padStart(2, '0');
   return `${yyyy}-${mm}-${dd}`;
 }
-function formatDateDisplay(isoDate){
-  if(!isoDate) return "";
-  const p = isoDate.split('-');
-  if(p.length !== 3) return isoDate;
-  return `${p[2]}/${p[1]}/${p[0]}`;
-}
 const LOCATIONS = ["JOINVILLE - SC","CASTRO - PR","CONTAGEM - MG","ESCADA - PE","RIO CLARO - SP","SIMOES FILHO - BA"];
 function detectLocation(txt){
   let clean = txt.replace(/\s+/g, ' ').toUpperCase();
