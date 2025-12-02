@@ -177,13 +177,21 @@ document.getElementById("togglePassword").addEventListener("click", () => { pass
 onAuthStateChanged(auth, (user) => { loginBox.style.display = user ? "none" : "block"; appBox.style.display = user ? "block" : "none"; });
 </script>
 <script>
-function extractPDFDate(txt){
-  const m = txt.match(/Data[\s:]+(\d{2}[./]\d{2}[./]\d{4})/i);
-  if(!m) return null;
+function extractPDFDate(txt) {
+  if (!txt) return null;
+  // Regex para capturar a data após "Data" no texto
+  const regex = /Data[\s:\-]*?(\d{2}[\/\.\-]\d{2}[\/\.\-]\d{4})/i;
+  const m = txt.match(regex);
+  if (!m) return null;
   
-  // normalizar para formato yyyy-mm-dd
-  const parts = m[1].replace(/\./g,"/").split("/");
-  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  // Processamento da data extraída para garantir o formato correto
+  const raw = m[1].replace(/\./g, '/');  // Substitui pontos por barras
+  const parts = raw.split('/');
+  if (parts.length !== 3) return null;
+  const yyyy = parts[2];
+  const mm = parts[1].padStart(2, '0');
+  const dd = parts[0].padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
@@ -229,7 +237,7 @@ function extractPDFDate(txt){
   const yyyy = parts[2];
   const mm = parts[1].padStart(2,'0');
   const dd = parts[0].padStart(2,'0');
-  return `${dd}/${mm}/${yyyy}`;
+  return `${yyyy}-${mm}-${dd}`;
 }
 function formatDateDisplay(isoDate){
   if(!isoDate) return "";
@@ -439,10 +447,7 @@ async function processFiles(files){
     const documento = docMatch ? docMatch[1] : "";
     const pdfDate = extractPDFDate(txt);
     const rows = extractRows(txt, local, documento, pdfDate);
-    rows.forEach(r => {
-  r["Nome da Origem"] = f.name;
-  r["Data do PDF"] = pdfDate;  // ← adicionada
-});
+    rows.forEach(r => r["Nome da Origem"] = f.name);
     compiled.push(...rows);
     processed++;
     progressBar.style.width = (processed/files.length*100)+"%";
