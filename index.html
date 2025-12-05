@@ -483,22 +483,20 @@ function renderPreview(rows){
   rows.slice(0,30).forEach(r=>{ html += "<tr>" + cols.map(c => {
   let value = r[c];
 
-  // Formatar apenas a Data Compensação no preview
   if (c === "Data Compensação" && value) {
-  value = formatDateDisplay(value);
-}
+    value = formatDateDisplay(value);
+  }
 
-// Formatar Montante bruto como moeda brasileira
-if (c === "Montante bruto" && value !== undefined && value !== null) {
-  value = Number(value).toLocaleString("pt-BR", {
-    style: "currency",
-    currency: "BRL"
-  });
-}
+  if (c === "Montante bruto" && value !== undefined && value !== null) {
+    value = Number(value).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL"
+    });
   }
 
   return `<td>${value ?? ""}</td>`;
 }).join("") + "</tr>";
+
  });
   html+="</tbody></table>";
   previewEl.innerHTML = html;
@@ -528,6 +526,7 @@ function buildExcel(rows){
   XLSX.utils.book_append_sheet(wb, ws, "Dados");
   return wb;
 }
+
 processBtn.addEventListener("click", async ()=>{
   const files = [...filesInput.files];
   if(!files.length){ alert("Selecione PDFs."); return; }
