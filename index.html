@@ -485,7 +485,16 @@ function renderPreview(rows){
 
   // Formatar apenas a Data Compensação no preview
   if (c === "Data Compensação" && value) {
-    value = formatDateDisplay(value);
+  value = formatDateDisplay(value);
+}
+
+// Formatar Montante bruto como moeda brasileira
+if (c === "Montante bruto" && value !== undefined && value !== null) {
+  value = Number(value).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL"
+  });
+}
   }
 
   return `<td>${value ?? ""}</td>`;
@@ -495,13 +504,20 @@ function renderPreview(rows){
   previewEl.innerHTML = html;
 }
 function buildExcel(rows){
-  // Criar uma cópia formatada para exportação
   const formattedRows = rows.map(r => {
     const copy = { ...r };
 
     // Formatar Data Compensação no formato brasileiro
     if (copy["Data Compensação"]) {
       copy["Data Compensação"] = formatDateDisplay(copy["Data Compensação"]);
+    }
+
+    // Formatar Montante bruto como moeda
+    if (copy["Montante bruto"] !== undefined && copy["Montante bruto"] !== null) {
+      copy["Montante bruto"] = Number(copy["Montante bruto"]).toLocaleString("pt-BR", {
+        style: "currency",
+        currency: "BRL"
+      });
     }
 
     return copy;
