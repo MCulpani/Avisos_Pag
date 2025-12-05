@@ -48,24 +48,32 @@ table td { border-bottom:1px solid #d1d5db !important; }
 #advancedDashboard div[style*="min-width"],
 .chart-wrapper,
 .card {
-    background:#ffffff !important;
-    border:1px solid #e5e7eb !important;
-    box-shadow:0 6px 18px rgba(0,0,0,0.08) !important;
- #preview {
-  max-height: none !important;
-  overflow-y: visible !important;
-  overflow-x: auto !important;
-  display: block !important;
-}
+      background:#ffffff !important;
+      border:1px solid #e5e7eb !important;
+      box-shadow:0 6px 18px rgba(0,0,0,0.08) !important;
+  }
 
-#preview table {
-  display: table !important;
-}
+  /* --- Garantir que TODAS as linhas da tabela apareçam no preview --- */
+  #preview {
+    max-height: none !important;
+    overflow-y: visible !important;
+    overflow-x: auto !important;
+    display: block !important;
+  }
 
-#app-area .card {
-  overflow-y: visible !important;
-  overflow-x: visible !important;
-}
+  #preview table {
+    display: table !important;
+    white-space: nowrap !important;
+  }
+
+  #app-area .card {
+    overflow-y: visible !important;
+    overflow-x: visible !important;
+  }
+
+  #preview, #app-area, #app-area .card {
+    height: auto !important;
+  }
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
