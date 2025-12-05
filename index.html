@@ -260,16 +260,22 @@ function extractRows(txt, local, documento, pdfDate){
   let rows = [], m;
   while((m = rowRegex.exec(txt)) !== null){
     rows.push({
-      "Código filial": getCodigoFilial(local),
-      "Local": local,
-      "Documento": documento,
-      "Data Compensação": pdfDate,
-      "Nº doc SAP": m[1],
-      "Doc Referência": m[2],
-      "Data": parseDateBR(m[3]),
-      "Desconto": parseCurrency(m[4]),
-      "Montante bruto": parseCurrency(m[5])
-    });
+  "Código filial": getCodigoFilial(local),
+  
+  // ➜ LOCAL sem “ - ”, agora vira “/”
+  "Local": local.replace(" - ", "/"),
+
+  "Documento": documento,
+  "Data Compensação": pdfDate,
+  "Nº doc SAP": m[1],
+
+  // ➜ DOC REFERÊNCIA removendo sufixos -0, -00, -000...
+  "Doc Referência": m[2].replace(/-0+$/g, ""),
+
+  "Data": parseDateBR(m[3]),
+  "Desconto": parseCurrency(m[4]),
+  "Montante bruto": parseCurrency(m[5])
+});
   }
   return rows;
 }
