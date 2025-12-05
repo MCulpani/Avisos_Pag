@@ -99,11 +99,22 @@ table td { border-bottom:1px solid #d1d5db !important; }
     <input id="files" type="file" accept="application/pdf" multiple />
     <div style="display:flex; align-items:center; gap:10px; margin-top:16px;">
       <button id="processBtn" class="app-btn">Compilar e Transformar</button>
-      <button id="downloadBtn" class="app-btn" disabled>Baixar Excel</button>
-      <div style="margin-left:auto;">
-        <button id="historyBtn" class="app-btn" style="background:#6366f1;">Histórico</button>
-        <button id="btnLogout" class="app-btn" style="background:#ff5252;">Sair</button>
-      </div>
+<button id="downloadBtn" class="app-btn" disabled>Baixar Excel</button>
+
+<!-- CAMPO DE BUSCA CENTRALIZADO -->
+<div style="flex:1; display:flex; justify-content:center;">
+  <input 
+    id="searchInput"
+    type="text"
+    placeholder="Pesquisar na tabela..."
+    style="padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; width:60%; max-width:260px;"
+  >
+</div>
+
+<div style="margin-left:auto;">
+    <button id="historyBtn" class="app-btn" style="background:#6366f1;">Histórico</button>
+    <button id="btnLogout" class="app-btn" style="background:#ff5252;">Sair</button>
+</div>
     </div>
     <div id="dashboardBox">Total em Avisos: R$ 0,00</div>
     <div id="progressContainer"><div id="progressBar"></div></div>
@@ -558,6 +569,21 @@ processBtn.addEventListener("click", async ()=>{
   processBtn.disabled = false;
 });
 downloadBtn.addEventListener("click", ()=>{ if(!workbookBinary) return; XLSX.writeFile(workbookBinary, "compilado_"+new Date().toISOString().slice(0,10)+".xlsx"); });
+
+  // === FILTRO DE PESQUISA NA TABELA DO PREVIEW ===
+const searchInput = document.getElementById("searchInput");
+
+if (searchInput) {
+  searchInput.addEventListener("input", () => {
+    const termo = searchInput.value.toLowerCase();
+    const linhas = previewEl.querySelectorAll("tbody tr");
+
+    linhas.forEach(tr => {
+      const texto = tr.innerText.toLowerCase();
+      tr.style.display = texto.includes(termo) ? "" : "none";
+    });
+  });
+}
 </script>
 </body>
 </html>
