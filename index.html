@@ -505,22 +505,14 @@ function buildExcel(rows){
   const formattedRows = rows.map(r => {
     const copy = { ...r };
 
-    // Formatar Data Compensação
+    // Formatar Data Compensação no formato brasileiro
     if (copy["Data Compensação"]) {
       copy["Data Compensação"] = formatDateDisplay(copy["Data Compensação"]);
     }
 
-    // Formatar Montante bruto SEM espaço após R$
+    // Exportar Montante bruto como número REAL (sem R$)
     if (copy["Montante bruto"] !== undefined && copy["Montante bruto"] !== null) {
-      let moeda = Number(copy["Montante bruto"]).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL"
-      });
-
-      // Remove todos os tipos de espaços invisíveis
-      moeda = moeda.replace(/R\$[\s\u00A0\u202F\u2009]+/g, "R$");
-      
-      copy["Montante bruto"] = moeda;
+      copy["Montante bruto"] = Number(copy["Montante bruto"]);
     }
 
     return copy;
