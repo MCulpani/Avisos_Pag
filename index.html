@@ -517,10 +517,9 @@ function buildExcel(rows){
         currency: "BRL"
       });
 
-      // Remover qualquer espaço invisível (NBSP) depois de "R$"
-      moeda = moeda.replace("R$ ", "R$"); // NBSP
-      moeda = moeda.replace("R$ ", "R$"); // fallback se houver espaço comum
-
+      // Remove todos os tipos de espaços invisíveis
+      moeda = moeda.replace(/R\$[\s\u00A0\u202F\u2009]+/g, "R$");
+      
       copy["Montante bruto"] = moeda;
     }
 
