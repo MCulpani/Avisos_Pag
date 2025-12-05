@@ -502,7 +502,7 @@ function renderPreview(rows){
   if(!rows.length){ previewEl.innerHTML="<p>Nenhum dado encontrado.</p>"; return; }
   const cols = Object.keys(rows[0]);
   let html = "<table><thead><tr>" + cols.map(c=>`<th>${c}</th>`).join("") + "</tr></thead><tbody>";
-  rows.slice(0,30).forEach(r=>{ html += "<tr>" + cols.map(c => {
+  rows.forEach(r=>{ html += "<tr>" + cols.map(c => {
   let value = r[c];
 
   if (c === "Data Compensação" && value) {
