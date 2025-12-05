@@ -270,7 +270,10 @@ function extractRows(txt, local, documento, pdfDate){
   "Nº doc SAP": m[1],
 
   // ➜ DOC REFERÊNCIA removendo sufixos -0, -00, -000...
-  "Doc Referência": m[2].replace(/-0+$/g, ""),
+  // Remover sufixos -0, -00, -000 e também todos os zeros à esquerda
+"Doc Referência": m[2]
+  .replace(/-0+$/g, "")   // remove -0, -00, -000 do final
+  .replace(/^0+/g, ""),   // remove zeros do começo
 
   "Data": parseDateBR(m[3]),
   "Desconto": parseCurrency(m[4]),
