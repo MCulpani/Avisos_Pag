@@ -480,7 +480,17 @@ function renderPreview(rows){
   if(!rows.length){ previewEl.innerHTML="<p>Nenhum dado encontrado.</p>"; return; }
   const cols = Object.keys(rows[0]);
   let html = "<table><thead><tr>" + cols.map(c=>`<th>${c}</th>`).join("") + "</tr></thead><tbody>";
-  rows.slice(0,30).forEach(r=>{ html+="<tr>"+cols.map(c=>`<td>${r[c]??""}</td>`).join("")+"</tr>"; });
+  rows.slice(0,30).forEach(r=>{ html += "<tr>" + cols.map(c => {
+  let value = r[c];
+
+  // Formatar apenas a Data Compensação no preview
+  if (c === "Data Compensação" && value) {
+    value = formatDateDisplay(value);
+  }
+
+  return `<td>${value ?? ""}</td>`;
+}).join("") + "</tr>";
+ });
   html+="</tbody></table>";
   previewEl.innerHTML = html;
 }
